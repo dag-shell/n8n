@@ -172,7 +172,10 @@ onBeforeUnmount(() => {
 				data-test-id="project-home-menu-item"
 			/>
 			<N8nMenuItem
-				v-if="projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled"
+				v-if="
+					(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
+					hasPermission(['instanceOwner'])
+				"
 				:item="personalProject"
 				:compact="props.collapsed"
 				:active="activeTabId === personalProject.id"

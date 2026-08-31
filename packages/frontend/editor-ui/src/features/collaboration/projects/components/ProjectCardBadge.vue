@@ -10,6 +10,7 @@ import { type IconOrEmoji, isIconOrEmoji } from '@n8n/design-system';
 import ProjectIcon from './ProjectIcon.vue';
 import { N8nBadge, N8nTooltip } from '@n8n/design-system';
 import type { DataTableResource } from '@/features/core/dataTable/types';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 type Props = {
 	resource: WorkflowResource | CredentialsResource | FolderResource | DataTableResource;
@@ -163,7 +164,7 @@ const projectLocation = computed(() => {
 <template>
 	<div :class="{ [$style.wrapper]: true, [$style['no-border']]: showBadgeBorder }" v-bind="$attrs">
 		<N8nTooltip
-			v-if="badgeText"
+			v-if="badgeText && hasPermission(['instanceOwner'])"
 			:disabled="!badgeTooltip || numberOfMembersInHomeTeamProject !== 0"
 			placement="top"
 		>

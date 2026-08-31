@@ -129,7 +129,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 		path: '/projects',
 		name: VIEWS.PROJECTS,
 		meta: {
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		redirect: '/home/workflows',
 		children: [
@@ -137,7 +137,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 				name: VIEWS.PROJECT_DETAILS,
 				path: ':projectId',
 				meta: {
-					middleware: ['authenticated'],
+					middleware: ['authenticated', 'instanceOwner'],
 				},
 				redirect: { name: VIEWS.PROJECTS_WORKFLOWS },
 				children: commonChildRoutes

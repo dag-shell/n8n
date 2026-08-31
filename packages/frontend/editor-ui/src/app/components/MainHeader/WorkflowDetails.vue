@@ -19,6 +19,7 @@ import ActionsDropdownMenu from '@/app/components/MainHeader/ActionsDropdownMenu
 import WorkflowHeaderDraftPublishActions from '@/app/components/MainHeader/WorkflowHeaderDraftPublishActions.vue';
 import { useI18n } from '@n8n/i18n';
 import { getResourcePermissions } from '@n8n/permissions';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import {
 	computed,
 	inject,
@@ -192,7 +193,7 @@ async function handleArchiveWorkflow() {
 
 	// Navigate to the home of the workflow's context (personal or team project)
 	const homeProject = workflowDocumentStore?.value?.homeProject;
-	if (homeProject) {
+	if (homeProject && hasPermission(['instanceOwner'])) {
 		await router.push({
 			name: VIEWS.PROJECTS_WORKFLOWS,
 			params: { projectId: homeProject.id },
@@ -297,7 +298,7 @@ async function handleDeleteWorkflow() {
 	});
 
 	// Navigate to the home of the workflow's context (personal or team project)
-	if (homeProject) {
+	if (homeProject && hasPermission(['instanceOwner'])) {
 		await router.push({
 			name: VIEWS.PROJECTS_WORKFLOWS,
 			params: { projectId: homeProject.id },
