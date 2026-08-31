@@ -5,10 +5,16 @@ import { useDataTableStore } from '@/features/core/dataTable/dataTable.store';
 import { useUIStore } from '@/app/stores/ui.store';
 import { useToast } from '@n8n/composables/useToast';
 import { useRoute, useRouter } from 'vue-router';
-import { DATA_TABLE_DETAILS, PROJECT_DATA_TABLES } from '@/features/core/dataTable/constants';
+import {
+	DATA_TABLE_DETAILS,
+	PROJECT_DATA_TABLES,
+	DATA_TABLE_VIEW,
+} from '@/features/core/dataTable/constants';
+import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
 import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { dataTableColumnNameSchema } from '@n8n/api-types';
 import { DATA_TABLE_SYSTEM_COLUMNS } from 'n8n-workflow';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 import {
 	N8nButton,
@@ -45,6 +51,7 @@ const props = defineProps<Props>();
 
 const dataTableStore = useDataTableStore();
 const uiStore = useUIStore();
+const projectsStore = useProjectsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -268,12 +275,14 @@ const onSubmit = async () => {
 	isLoading.value = true;
 	try {
 		let newDataTable;
+		const targetProjectId =
+			(route.params.projectId as string) ||
+			projectsStore.personalProject?.id ||
+			projectsStore.currentProjectId ||
+			'';
 
 		if (selectedOption.value === 'scratch') {
-			newDataTable = await dataTableStore.createDataTable(
-				dataTableName.value,
-				route.params.projectId as string,
-			);
+			newDataTable = await dataTableStore.createDataTable(dataTableName.value, targetProjectId);
 		} else if (creationMode.value === 'import' && uploadedFileId.value) {
 			const hasColumnChanges = csvColumns.value.some(
 				(col) => !col.included || col.name !== col.csvColumnName.replace(/\s+/g, '_'),
@@ -281,7 +290,7 @@ const onSubmit = async () => {
 
 			newDataTable = await dataTableStore.createDataTable(
 				dataTableName.value,
-				route.params.projectId as string,
+				targetProjectId,
 				includedColumns.value.map((col) => ({
 					name: col.name,
 					type: col.type,
@@ -300,6 +309,15 @@ const onSubmit = async () => {
 			});
 			reset(true);
 			uiStore.closeModal(props.modalName);
+			if (!hasPermission(['instanceOwner'])) {
+				void router.push({
+					name: 'data-table-details-home',
+					params: {
+						id: newDataTable.id,
+					},
+				});
+				return;
+			}
 			void router.push({
 				name: DATA_TABLE_DETAILS,
 				params: {
@@ -318,8 +336,23 @@ const goBack = () => {
 	creationMode.value = 'select';
 };
 
+const closeModal = () => {
+	reset(true);
+	uiStore.closeModal(props.modalName);
+	if (
+		hasPermission(['instanceOwner']) &&
+		route.name === PROJECT_DATA_TABLES &&
+		route.params.new === 'new'
+	) {
+		void router.replace({
+			name: PROJECT_DATA_TABLES,
+			params: { projectId: route.params.projectId },
+		});
+	}
+};
+
 const redirectToDataTables = () => {
-	void router.replace({ name: PROJECT_DATA_TABLES });
+	closeModal();
 };
 </script>
 
@@ -478,7 +511,7 @@ const redirectToDataTables = () => {
 					size="large"
 					:label="i18n.baseText('generic.cancel')"
 					data-test-id="cancel-select-button"
-					@click="redirectToDataTables"
+					@click="closeModal"
 				/>
 				<N8nButton
 					v-if="creationMode === 'select'"

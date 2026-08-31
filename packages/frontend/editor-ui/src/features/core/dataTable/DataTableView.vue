@@ -27,6 +27,7 @@ import ResourcesListLayout from '@/app/components/layouts/ResourcesListLayout.vu
 import ResourcesListEmptyState from '@/app/components/layouts/ResourcesListEmptyState.vue';
 import { DEBOUNCE_TIME } from '@/app/constants';
 import { useDependencies } from '@/app/composables/useDependencies';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 const i18n = useI18n();
 const route = useRoute();
@@ -149,6 +150,10 @@ const onPaginationUpdate = async (payload: SortingAndPaginationUpdates) => {
 };
 
 const onAddModalClick = () => {
+	if (!hasPermission(['instanceOwner'])) {
+		uiStore.openModal(ADD_DATA_TABLE_MODAL_KEY);
+		return;
+	}
 	void router.push({
 		name: PROJECT_DATA_TABLES,
 		params: { projectId: currentProject.value?.id, new: 'new' },

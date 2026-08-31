@@ -48,6 +48,15 @@ export const DataTableModule: FrontendModuleDescription = {
 			},
 		},
 		{
+			name: 'data-table-details-home',
+			path: '/home/datatables/:id',
+			props: true,
+			component: DataTableDetailsView,
+			meta: {
+				middleware: ['authenticated', 'custom'],
+			},
+		},
+		{
 			name: PROJECT_DATA_TABLES,
 			path: 'datatables/:new(new)?',
 			props: true,

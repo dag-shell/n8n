@@ -19,7 +19,12 @@ import { type IconName } from '@n8n/design-system';
 import type { IUser } from 'n8n-workflow';
 import { type IconOrEmoji, isIconOrEmoji } from '@n8n/design-system';
 import { useUIStore } from '@/app/stores/ui.store';
-import { PROJECT_DATA_TABLES } from '@/features/core/dataTable/constants';
+import {
+	PROJECT_DATA_TABLES,
+	DATA_TABLE_VIEW,
+	DATA_TABLE_DETAILS,
+	ADD_DATA_TABLE_MODAL_KEY,
+} from '@/features/core/dataTable/constants';
 import { instanceAiCreateAgentRoute } from '@/features/ai/instanceAi/createAgentRoute';
 import { generateNanoId } from '@n8n/utils/generate-nano-id';
 import { useAgentPermissions } from '@/features/agents/composables/useAgentPermissions';
@@ -31,6 +36,7 @@ import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { useAgentTelemetry } from '@/features/agents/composables/useAgentTelemetry';
 import { useUsersStore } from '@n8n/stores/users.store';
 import { useFavoritesStore } from '@/app/stores/favorites.store';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 const route = useRoute();
 const router = useRouter();
@@ -69,6 +75,21 @@ const emit = defineEmits<{
 }>();
 
 const headerIcon = computed((): IconOrEmoji => {
+	if (!hasPermission(['instanceOwner'])) {
+		const currentName = route.name as string;
+		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+			return { type: 'icon', value: 'git-branch' };
+		} else if (currentName === VIEWS.CREDENTIALS) {
+			return { type: 'icon', value: 'key' };
+		} else if (currentName === VIEWS.EXECUTIONS) {
+			return { type: 'icon', value: 'history' };
+		} else if ([VIEWS.HOME_VARIABLES, VIEWS.PROJECTS_VARIABLES].includes(currentName as VIEWS)) {
+			return { type: 'icon', value: 'braces' };
+		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
+			return { type: 'icon', value: 'table' };
+		}
+	}
+
 	if (projectsStore.currentProject?.type === ProjectTypes.Personal) {
 		return { type: 'icon', value: 'user' };
 	} else if (projectsStore.currentProject?.name) {
@@ -89,6 +110,21 @@ const isPersonalProject = computed(() => {
 });
 
 const projectName = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		const currentName = route.name as string;
+		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+			return i18n.baseText('mainSidebar.workflows');
+		} else if (currentName === VIEWS.CREDENTIALS) {
+			return i18n.baseText('mainSidebar.credentials');
+		} else if (currentName === VIEWS.EXECUTIONS) {
+			return i18n.baseText('mainSidebar.executions');
+		} else if ([VIEWS.HOME_VARIABLES, VIEWS.PROJECTS_VARIABLES].includes(currentName as VIEWS)) {
+			return i18n.baseText('mainSidebar.variables');
+		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
+			return i18n.baseText('dataTable.dataTables');
+		}
+	}
+
 	if (!projectsStore.currentProject) {
 		if (projectPages.isSharedSubPage) {
 			return i18n.baseText('projects.header.shared.title');
@@ -362,6 +398,13 @@ const actions: Record<ActionTypes, (projectId: string, source: CreateSource) => 
 		});
 	},
 	[ACTION_TYPES.CREDENTIAL]: (projectId: string) => {
+		if (!hasPermission(['instanceOwner'])) {
+			void router.push({
+				name: VIEWS.CREDENTIALS,
+				params: { credentialId: 'create' },
+			});
+			return;
+		}
 		void router.push({
 			name: VIEWS.PROJECTS_CREDENTIALS,
 			params: {
@@ -377,6 +420,10 @@ const actions: Record<ActionTypes, (projectId: string, source: CreateSource) => 
 		emit('createFolder');
 	},
 	[ACTION_TYPES.DATA_TABLE]: (projectId: string) => {
+		if (!hasPermission(['instanceOwner'])) {
+			uiStore.openModal(ADD_DATA_TABLE_MODAL_KEY);
+			return;
+		}
 		void router.push({
 			name: PROJECT_DATA_TABLES,
 			params: { projectId, new: 'new' },
@@ -404,6 +451,35 @@ const pageType = computed(() => {
 });
 
 const sectionDescription = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		const currentName = route.name as string;
+		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+			return (
+				i18n.baseText('workflows.header.description') ||
+				'Create, manage, and monitor your automated workflows.'
+			);
+		} else if (currentName === VIEWS.CREDENTIALS) {
+			return (
+				i18n.baseText('credentials.header.description') ||
+				'Manage connected accounts and authentication credentials.'
+			);
+		} else if (currentName === VIEWS.EXECUTIONS) {
+			return (
+				i18n.baseText('executions.header.description') ||
+				'View past workflow runs, statuses, and execution history.'
+			);
+		} else if ([VIEWS.HOME_VARIABLES, VIEWS.PROJECTS_VARIABLES].includes(currentName as VIEWS)) {
+			return (
+				i18n.baseText('variables.header.description') ||
+				'Manage variables and environment configuration values.'
+			);
+		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
+			return (
+				i18n.baseText('dataTable.description') || 'Manage and store your structured data tables.'
+			);
+		}
+	}
+
 	if (projectPages.isSharedSubPage) {
 		return i18n.baseText('projects.header.shared.subtitle');
 	} else if (projectPages.isOverviewSubPage) {
@@ -539,7 +615,7 @@ const onSelect = (action: string, source: CreateSource) => {
 			</div>
 		</div>
 		<slot></slot>
-		<div :class="$style.actions">
+		<div v-if="hasPermission(['instanceOwner'])" :class="$style.actions">
 			<ProjectTabs
 				:page-type="pageType"
 				:show-executions="!projectPages.isSharedSubPage"

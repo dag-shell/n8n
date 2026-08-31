@@ -13,6 +13,7 @@ import type { DataTableResource } from '../types';
 import { ResourceType } from '@/features/collaboration/projects/projects.utils';
 import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
 import { useDependencies } from '@/app/composables/useDependencies';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 type Props = {
 	dataTable: DataTableResource;
@@ -32,6 +33,14 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const dataTableRoute = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		return {
+			name: 'data-table-details-home',
+			params: {
+				id: props.dataTable.id,
+			},
+		};
+	}
 	return {
 		name: DATA_TABLE_DETAILS,
 		params: {

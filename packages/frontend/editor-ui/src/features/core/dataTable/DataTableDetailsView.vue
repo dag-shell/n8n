@@ -32,7 +32,7 @@ import { useDependencies } from '@/app/composables/useDependencies';
 
 type Props = {
 	id: string;
-	projectId: string;
+	projectId?: string;
 };
 
 const props = defineProps<Props>();
@@ -63,13 +63,15 @@ const showErrorAndGoBackToList = async (error: unknown) => {
 		error = new Error(String(i18n.baseText('dataTable.getDetails.error')));
 	}
 	toast.showError(error, i18n.baseText('dataTable.getDetails.error'));
-	await router.push({ name: DATA_TABLE_VIEW, params: { projectId: props.projectId } });
+	await router.push({ name: DATA_TABLE_VIEW });
 };
 
 const initialize = async () => {
 	loading.value = true;
 	try {
-		const response = await dataTableStore.fetchOrFindDataTable(props.id, props.projectId);
+		const response = props.projectId
+			? await dataTableStore.fetchOrFindDataTable(props.id, props.projectId)
+			: await dataTableStore.fetchDataTableById(props.id);
 		if (response) {
 			dataTable.value = response;
 			documentTitle.set(`${i18n.baseText('dataTable.dataTables')} > ${response.name}`);

@@ -8,10 +8,12 @@ import { N8nIcon, N8nMenuItem, N8nText } from '@n8n/design-system';
 import type { IMenuItem } from '@n8n/design-system';
 import { useI18n } from '@n8n/i18n';
 import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useProjectsStore } from '../projects.store';
 import { DEFAULT_PROJECT_ICON } from '../projects.constants';
 import type { ProjectListItem } from '../projects.types';
 import { CHAT_VIEW } from '@/features/ai/chatHub/constants';
+import { DATA_TABLE_VIEW } from '@/features/core/dataTable/constants';
 import { useFavoritesStore } from '@/app/stores/favorites.store';
 import { useFavoriteNavItems } from '../composables/useFavoriteNavItems';
 import { INSTANCE_AI_VIEW } from '@/features/ai/instanceAi/constants';
@@ -31,12 +33,15 @@ type Props = {
 const props = defineProps<Props>();
 
 const locale = useI18n();
+const route = useRoute();
 const globalEntityCreation = useGlobalEntityCreation();
 
 const projectsStore = useProjectsStore();
 const settingsStore = useSettingsStore();
 const usersStore = useUsersStore();
 const favoritesStore = useFavoritesStore();
+
+const isOwner = computed(() => hasPermission(['instanceOwner']));
 
 const {
 	favoriteGroups,
@@ -78,6 +83,86 @@ const home = computed<IMenuItem>(() => ({
 		to: { name: VIEWS.HOMEPAGE },
 	},
 }));
+
+const workflowsItem = computed<IMenuItem>(() => ({
+	id: 'workflows',
+	label: locale.baseText('mainSidebar.workflows'),
+	icon: 'git-branch',
+	route: {
+		to: { name: VIEWS.WORKFLOWS },
+	},
+}));
+
+const credentialsItem = computed<IMenuItem>(() => ({
+	id: 'credentials',
+	label: locale.baseText('mainSidebar.credentials'),
+	icon: 'key',
+	route: {
+		to: { name: VIEWS.CREDENTIALS },
+	},
+}));
+
+const executionsItem = computed<IMenuItem>(() => ({
+	id: 'executions',
+	label: locale.baseText('mainSidebar.executions'),
+	icon: 'history',
+	route: {
+		to: { name: VIEWS.EXECUTIONS },
+	},
+}));
+
+const variablesItem = computed<IMenuItem>(() => ({
+	id: 'variables',
+	label: locale.baseText('mainSidebar.variables'),
+	icon: 'braces',
+	route: {
+		to: { name: VIEWS.HOME_VARIABLES },
+	},
+}));
+
+const dataTablesItem = computed<IMenuItem>(() => ({
+	id: 'datatables',
+	label: locale.baseText('dataTable.dataTables'),
+	icon: 'table',
+	route: {
+		to: { name: DATA_TABLE_VIEW },
+	},
+}));
+
+const isWorkflowsActive = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.WORKFLOWS,
+		VIEWS.WORKFLOW,
+		VIEWS.NEW_WORKFLOW,
+		VIEWS.FOLDERS,
+		VIEWS.HOMEPAGE,
+	].includes(currentName as VIEWS);
+});
+
+const isCredentialsActive = computed(() => {
+	const currentName = route.name as string;
+	return [VIEWS.CREDENTIALS, VIEWS.CREDENTIAL_EDIT, VIEWS.CREDENTIAL_NEW].includes(
+		currentName as VIEWS,
+	);
+});
+
+const isExecutionsActive = computed(() => {
+	const currentName = route.name as string;
+	return [VIEWS.EXECUTIONS, VIEWS.EXECUTION_PREVIEW, VIEWS.EXECUTION_DEBUG].includes(
+		currentName as VIEWS,
+	);
+});
+
+const isVariablesActive = computed(() => {
+	const currentName = route.name as string;
+	return [VIEWS.HOME_VARIABLES, VIEWS.PROJECTS_VARIABLES].includes(currentName as VIEWS);
+});
+
+const isDataTablesActive = computed(() => {
+	const currentName = route.name as string;
+	return [DATA_TABLE_VIEW, 'data-table-details', 'project-data-tables'].includes(currentName);
+});
 
 const shared = computed<IMenuItem>(() => ({
 	id: 'shared',
@@ -165,34 +250,87 @@ onBeforeUnmount(() => {
 				:active="activeTabId === 'instance-ai'"
 				data-test-id="project-instance-ai-menu-item"
 			/>
+			<!-- Owner Navigation -->
+			<template v-if="isOwner">
+				<N8nMenuItem
+					:item="home"
+					:compact="props.collapsed"
+					:active="activeTabId === 'home'"
+					data-test-id="project-home-menu-item"
+				/>
+				<N8nMenuItem
+					v-if="
+						(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
+						hasPermission(['instanceOwner'])
+					"
+					:item="personalProject"
+					:compact="props.collapsed"
+					:active="activeTabId === personalProject.id"
+					data-test-id="project-personal-menu-item"
+				/>
+				<N8nMenuItem
+					v-if="
+						(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
+						hasMultipleVerifiedUsers
+					"
+					:item="shared"
+					:compact="props.collapsed"
+					:active="activeTabId === 'shared'"
+					data-test-id="project-shared-menu-item"
+				/>
+			</template>
+
+			<!-- Non-Owner Direct Resource Navigation (Grouped) -->
+			<template v-else>
+				<!-- Group 1: Workflows & Executions -->
+				<div :class="$style.navGroup">
+					<N8nMenuItem
+						:item="workflowsItem"
+						:compact="props.collapsed"
+						:active="isWorkflowsActive"
+						data-test-id="project-workflows-menu-item"
+					/>
+					<N8nMenuItem
+						:item="executionsItem"
+						:compact="props.collapsed"
+						:active="isExecutionsActive"
+						data-test-id="project-executions-menu-item"
+					/>
+				</div>
+
+				<div :class="$style.groupDivider" />
+
+				<!-- Group 2: Data tables -->
+				<div :class="$style.navGroup">
+					<N8nMenuItem
+						:item="dataTablesItem"
+						:compact="props.collapsed"
+						:active="isDataTablesActive"
+						data-test-id="project-datatables-menu-item"
+					/>
+				</div>
+
+				<div :class="$style.groupDivider" />
+
+				<!-- Group 3: Credentials & Variables -->
+				<div :class="$style.navGroup">
+					<N8nMenuItem
+						:item="credentialsItem"
+						:compact="props.collapsed"
+						:active="isCredentialsActive"
+						data-test-id="project-credentials-menu-item"
+					/>
+					<N8nMenuItem
+						:item="variablesItem"
+						:compact="props.collapsed"
+						:active="isVariablesActive"
+						data-test-id="project-variables-menu-item"
+					/>
+				</div>
+			</template>
+
 			<N8nMenuItem
-				:item="home"
-				:compact="props.collapsed"
-				:active="activeTabId === 'home'"
-				data-test-id="project-home-menu-item"
-			/>
-			<N8nMenuItem
-				v-if="
-					(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
-					hasPermission(['instanceOwner'])
-				"
-				:item="personalProject"
-				:compact="props.collapsed"
-				:active="activeTabId === personalProject.id"
-				data-test-id="project-personal-menu-item"
-			/>
-			<N8nMenuItem
-				v-if="
-					(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
-					hasMultipleVerifiedUsers
-				"
-				:item="shared"
-				:compact="props.collapsed"
-				:active="activeTabId === 'shared'"
-				data-test-id="project-shared-menu-item"
-			/>
-			<N8nMenuItem
-				v-if="isWorkflowReviewsNavVisible"
+				v-if="isWorkflowReviewsNavVisible && isOwner"
 				:item="workflowReviews"
 				:compact="props.collapsed"
 				:active="activeTabId === 'workflow-reviews'"
@@ -206,7 +344,7 @@ onBeforeUnmount(() => {
 				data-test-id="project-chat-menu-item"
 			/>
 		</div>
-		<template v-if="hasFavorites">
+		<template v-if="hasFavorites && isOwner">
 			<button
 				v-if="!props.collapsed"
 				:class="$style.sectionHeader"
@@ -254,7 +392,9 @@ onBeforeUnmount(() => {
 				</template>
 			</div>
 		</template>
-		<template v-if="projectsStore.isTeamProjectFeatureEnabled && displayProjects.length > 0">
+		<template
+			v-if="isOwner && projectsStore.isTeamProjectFeatureEnabled && displayProjects.length > 0"
+		>
 			<button
 				v-if="!props.collapsed"
 				:class="$style.sectionHeader"
@@ -272,6 +412,7 @@ onBeforeUnmount(() => {
 		</template>
 		<div
 			v-if="
+				isOwner &&
 				(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
 				(!projectsStore.isTeamProjectFeatureEnabled || !projectsCollapsed || props.collapsed)
 			"
@@ -435,5 +576,18 @@ onBeforeUnmount(() => {
 	&:focus-visible {
 		color: var(--color--text);
 	}
+}
+
+.navGroup {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--5xs);
+}
+
+.groupDivider {
+	display: block;
+	width: 100%;
+	border-bottom: var(--border);
+	margin: var(--spacing--xs) 0;
 }
 </style>

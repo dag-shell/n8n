@@ -5,10 +5,11 @@ import { useI18n } from '@n8n/i18n';
 import type { PathItem } from '@n8n/design-system';
 import { useRouter } from 'vue-router';
 import DataTableActions from '@/features/core/dataTable/components/DataTableActions.vue';
-import { PROJECT_DATA_TABLES } from '@/features/core/dataTable/constants';
+import { PROJECT_DATA_TABLES, DATA_TABLE_VIEW } from '@/features/core/dataTable/constants';
 import { useDataTableStore } from '@/features/core/dataTable/dataTable.store';
 import { useToast } from '@n8n/composables/useToast';
 import { telemetry } from '@/app/plugins/telemetry';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 import { N8nBreadcrumbs, N8nInlineTextEdit } from '@n8n/design-system';
 import ProjectBreadcrumb from '@/features/core/folders/components/ProjectBreadcrumb.vue';
@@ -44,6 +45,15 @@ const project = computed(() => {
 });
 
 const breadcrumbs = computed<PathItem[]>(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		return [
+			{
+				id: 'datatables',
+				label: i18n.baseText('dataTable.dataTables'),
+				href: '/home/datatables',
+			},
+		];
+	}
 	if (!project.value) {
 		return [];
 	}
@@ -63,6 +73,12 @@ const onItemClicked = async (item: PathItem) => {
 };
 
 const onDelete = async () => {
+	if (!hasPermission(['instanceOwner'])) {
+		await router.push({
+			name: DATA_TABLE_VIEW,
+		});
+		return;
+	}
 	await router.push({
 		name: PROJECT_DATA_TABLES,
 		params: { projectId: props.dataTable.projectId },
