@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from '@n8n/i18n';
 import { type Project, ProjectTypes } from '@/features/collaboration/projects/projects.types';
 import { isIconOrEmoji, type IconOrEmoji } from '@n8n/design-system';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 import { N8nLink, N8nText } from '@n8n/design-system';
 import ProjectIcon from '@/features/collaboration/projects/components/ProjectIcon.vue';
@@ -32,6 +33,10 @@ const projectIcon = computed((): IconOrEmoji => {
 		return props.icon;
 	}
 
+	if (!hasPermission(['instanceOwner'])) {
+		return { type: 'icon', value: 'git-branch' };
+	}
+
 	if (props.isShared) {
 		return { type: 'icon', value: 'share' };
 	}
@@ -50,6 +55,10 @@ const projectIcon = computed((): IconOrEmoji => {
 });
 
 const projectName = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		return i18n.baseText('mainSidebar.workflows');
+	}
+
 	if (props.isShared) {
 		return i18n.baseText('projects.menu.shared');
 	}
@@ -61,6 +70,10 @@ const projectName = computed(() => {
 });
 
 const projectLink = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		return '/home/workflows';
+	}
+
 	if (props.isShared) {
 		return '/shared';
 	}
@@ -91,7 +104,13 @@ const onProjectMouseUp = () => {
 		@mouseup="isDragging ? onProjectMouseUp() : null"
 	>
 		<N8nLink :to="projectLink" :class="[$style['project-link']]">
-			<ProjectIcon :icon="projectIcon" :border-less="true" size="mini" :title="projectName" />
+			<ProjectIcon
+				v-if="hasPermission(['instanceOwner'])"
+				:icon="projectIcon"
+				:border-less="true"
+				size="mini"
+				:title="projectName"
+			/>
 			<N8nText
 				size="medium"
 				color="text-base"

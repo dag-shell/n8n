@@ -132,8 +132,8 @@ watch(
 			:highlight-last-item="false"
 			@item-selected="onItemClicked"
 		>
-			<template #prepend>
-				<ProjectBreadcrumb v-if="project" :current-project="project" />
+			<template v-if="project && hasPermission(['instanceOwner'])" #prepend>
+				<ProjectBreadcrumb :current-project="project" />
 			</template>
 			<template #append>
 				<span :class="$style.separator">{{ BREADCRUMBS_SEPARATOR }}</span>

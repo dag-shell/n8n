@@ -598,6 +598,7 @@ const onSelect = (action: string, source: CreateSource) => {
 					<div style="display: flex; gap: var(--spacing--xs); align-items: center">
 						<ReadyToRunButton :has-active-callouts="props.hasActiveCallouts" />
 						<ProjectCreateResource
+							v-if="hasPermission(['instanceOwner'])"
 							data-test-id="add-resource-buttons"
 							:actions="menu"
 							:disabled="sourceControlStore.preferences.branchReadOnly"
@@ -610,6 +611,14 @@ const onSelect = (action: string, source: CreateSource) => {
 								@click="onSelect(selectedMainButtonType, 'button')"
 							/>
 						</ProjectCreateResource>
+						<N8nButton
+							v-else
+							:data-test-id="`add-resource-${selectedMainButtonType}`"
+							v-bind="mainButtonConfig"
+							size="medium"
+							:disabled="mainButtonConfig.disabled || sourceControlStore.preferences.branchReadOnly"
+							@click="onSelect(selectedMainButtonType, 'button')"
+						/>
 					</div>
 				</N8nTooltip>
 			</div>

@@ -5,8 +5,8 @@ import { ProjectTypes } from '@/features/collaboration/projects/projects.types';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useFoldersStore } from '../folders.store';
 import type { FolderPathItem, FolderShortInfo } from '../folders.types';
-import type { IUser } from 'n8n-workflow';
 import ProjectBreadcrumb from '@/features/core/folders/components/ProjectBreadcrumb.vue';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import {
 	N8nBreadcrumbs,
 	N8nDropdownMenu,
@@ -123,7 +123,9 @@ const visibleBreadcrumbsItems = computed<FolderPathItem[]>(() => {
 		items.push({
 			id: parent.id,
 			label: parent.name,
-			href: `/projects/${currentProject.value?.id}/folders/${parent.id}/workflows`,
+			href: hasPermission(['instanceOwner'])
+				? `/projects/${currentProject.value?.id}/folders/${parent.id}/workflows`
+				: `/home/folders/${parent.id}/workflows`,
 			parentFolder: parent.parentFolder,
 		});
 		visibleIds.value.add(parent.id);
@@ -133,7 +135,9 @@ const visibleBreadcrumbsItems = computed<FolderPathItem[]>(() => {
 		label: props.currentFolder.name,
 		parentFolder: props.currentFolder.parentFolder,
 		href: props.currentFolderAsLink
-			? `/projects/${currentProject.value?.id}/folders/${props.currentFolder.id}/workflows`
+			? hasPermission(['instanceOwner'])
+				? `/projects/${currentProject.value?.id}/folders/${props.currentFolder.id}/workflows`
+				: `/home/folders/${props.currentFolder.id}/workflows`
 			: undefined,
 	});
 	if (currentProject.value) {

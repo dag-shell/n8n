@@ -23,6 +23,7 @@ import { useI18n } from '@n8n/i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { ResourceType } from '@/features/collaboration/projects/projects.utils';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import type { EventBus } from '@n8n/utils/event-bus';
 import type { UserAction, WorkflowResource } from '@/Interface';
 import type { IUser } from 'n8n-workflow';
@@ -170,13 +171,15 @@ const cardBreadcrumbs = computed<PathItem[]>(() => {
 				id: props.data.parentFolder.id,
 				name: props.data.parentFolder.name,
 				label: props.data.parentFolder.name,
-				href: router.resolve({
-					name: VIEWS.PROJECTS_FOLDERS,
-					params: {
-						projectId: props.data.homeProject?.id,
-						folderId: props.data.parentFolder.id,
-					},
-				}).href,
+				href: hasPermission(['instanceOwner'])
+					? router.resolve({
+							name: VIEWS.PROJECTS_FOLDERS,
+							params: {
+								projectId: props.data.homeProject?.id,
+								folderId: props.data.parentFolder.id,
+							},
+						}).href
+					: `/home/folders/${props.data.parentFolder.id}/workflows`,
 			},
 		];
 	}
