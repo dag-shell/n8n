@@ -225,7 +225,7 @@ export class VariablesService {
 		// If variable is for a project, check that it does not already exist in the same project with the same key
 		if (projectId && existingVariablesByKey.find((v) => v.project?.id === projectId)) {
 			throw new VariableCountLimitReachedError(
-				`A variable with key "${key}" already exists in the specified project`,
+				`A variable with key "${key}" already exists in the specified workspace`,
 			);
 		}
 	}
@@ -243,7 +243,7 @@ export class VariablesService {
 		);
 		if (!userHasRight) {
 			throw new ForbiddenError(
-				`You are not allowed to create a variable${variable.projectId ? ' in this project' : ''}`,
+				`You are not allowed to create a variable${variable.projectId ? ' in this workspace' : ''}`,
 			);
 		}
 
