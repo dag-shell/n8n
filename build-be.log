@@ -1,0 +1,4 @@
+$ tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && pnpm run build:data && pnpm run build:agent-library
+$ node scripts/build.mjs
+$ node scripts/bundle-agent-library.mjs
+[bundle-agent-library] Wrote dist/agent-library-bundle.js — 221.6 KB (0.22 MB)

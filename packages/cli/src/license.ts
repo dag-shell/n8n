@@ -278,7 +278,11 @@ export class License implements LicenseProvider {
 	}
 
 	isLicensed(feature: BooleanLicenseFeature) {
-		if (feature === LICENSE_FEATURES.VARIABLES) {
+		if (
+			feature === LICENSE_FEATURES.VARIABLES ||
+			feature === LICENSE_FEATURES.WORKFLOW_DIFFS ||
+			feature === LICENSE_FEATURES.NAMED_VERSIONS
+		) {
 			return true;
 		}
 		return this.manager?.hasFeatureEnabled(feature) ?? false;
@@ -415,6 +419,12 @@ export class License implements LicenseProvider {
 		if (feature === 'quota:maxVariables' || feature === LICENSE_QUOTAS.VARIABLES_LIMIT) {
 			return UNLIMITED_LICENSE_QUOTA as FeatureReturnType[T];
 		}
+		if (
+			feature === 'quota:workflowHistoryPrune' ||
+			feature === LICENSE_QUOTAS.WORKFLOW_HISTORY_PRUNE_LIMIT
+		) {
+			return UNLIMITED_LICENSE_QUOTA as FeatureReturnType[T];
+		}
 		return this.manager?.getFeatureValue(feature) as FeatureReturnType[T];
 	}
 
@@ -473,10 +483,7 @@ export class License implements LicenseProvider {
 
 	/** @deprecated Use `LicenseState` instead. */
 	getWorkflowHistoryPruneLimit() {
-		return (
-			this.getValue(LICENSE_QUOTAS.WORKFLOW_HISTORY_PRUNE_LIMIT) ??
-			DEFAULT_WORKFLOW_HISTORY_PRUNE_LIMIT
-		);
+		return this.getValue(LICENSE_QUOTAS.WORKFLOW_HISTORY_PRUNE_LIMIT) ?? UNLIMITED_LICENSE_QUOTA;
 	}
 
 	/** @deprecated Use `LicenseState` instead. */

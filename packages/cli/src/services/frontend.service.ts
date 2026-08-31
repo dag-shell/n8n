@@ -344,8 +344,8 @@ export class FrontendService {
 				workerView: false,
 				advancedPermissions: false,
 
-				workflowDiffs: false,
-				namedVersions: false,
+				workflowDiffs: true,
+				namedVersions: true,
 				provisioning: false,
 				projects: {
 					team: {
