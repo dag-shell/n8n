@@ -25,6 +25,7 @@ import { useI18n } from '@n8n/i18n';
 import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { useAssistantStore } from '@/features/ai/assistant/assistant.store';
 import { useChatPanelStore } from '@/features/ai/assistant/chatPanel.store';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 import {
 	N8nAssistantIcon,
@@ -185,7 +186,7 @@ function openCommandBar(event: MouseEvent) {
 			</KeyboardShortcutTooltip>
 		</NodeCreatorShortcutCoachmark>
 		<KeyboardShortcutTooltip
-			v-if="!settingsStore.isCanvasOnly"
+			v-if="!settingsStore.isCanvasOnly && hasPermission(['instanceOwner'])"
 			:label="i18n.baseText('nodeView.openCommandBar')"
 			:shortcut="{ keys: ['k'], metaKey: true }"
 			placement="left"
@@ -214,6 +215,7 @@ function openCommandBar(event: MouseEvent) {
 			/>
 		</KeyboardShortcutTooltip>
 		<KeyboardShortcutTooltip
+			v-if="hasPermission(['instanceOwner'])"
 			:label="sidePanelTooltip"
 			:shortcut="{ keys: ['f'], shiftKey: true }"
 			placement="left"

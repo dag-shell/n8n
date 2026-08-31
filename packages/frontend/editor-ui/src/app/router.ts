@@ -395,7 +395,7 @@ export const routes: RouteRecordRaw[] = [
 		meta: {
 			layout: 'workflow',
 			keepWorkflowAlive: true,
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		children: [
 			{

@@ -18,6 +18,7 @@ import { useInjectWorkflowId } from '@/app/composables/useInjectWorkflowId';
 import type { FolderShortInfo } from '@/features/core/folders/folders.types';
 
 import { useToast } from '@n8n/composables/useToast';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 const router = useRouter();
 const route = useRoute();
 const locale = useI18n();
@@ -50,11 +51,14 @@ const executionRoutes: VIEWS[] = [
 	VIEWS.EXECUTION_PREVIEW,
 ];
 const tabBarItems = computed(() => {
-	return [
+	const items = [
 		{ value: MAIN_HEADER_TABS.WORKFLOW, label: locale.baseText('generic.editor') },
 		{ value: MAIN_HEADER_TABS.EXECUTIONS, label: locale.baseText('generic.executions') },
-		{ value: MAIN_HEADER_TABS.EVALUATION, label: locale.baseText('generic.tests') },
 	];
+	if (hasPermission(['instanceOwner'])) {
+		items.push({ value: MAIN_HEADER_TABS.EVALUATION, label: locale.baseText('generic.tests') });
+	}
+	return items;
 });
 
 const activeNode = computed(() => ndvStore.value?.activeNode ?? null);

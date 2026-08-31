@@ -4,6 +4,7 @@ import { STORES } from '@n8n/stores';
 import { SETUP_PANEL } from '@/app/constants';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 const HIGHLIGHT_CLEAR_DEBOUNCE_MS = 300;
 
@@ -12,6 +13,9 @@ export const useSetupPanelStore = defineStore(STORES.SETUP_PANEL, () => {
 	const { debounce } = useDebounce();
 
 	const isFeatureEnabled = computed(() => {
+		if (!hasPermission(['instanceOwner'])) {
+			return false;
+		}
 		return posthogStore.getVariant(SETUP_PANEL.name) === SETUP_PANEL.variant;
 	});
 
