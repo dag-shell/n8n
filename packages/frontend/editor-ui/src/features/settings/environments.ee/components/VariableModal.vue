@@ -22,6 +22,7 @@ import { useProjectsStore } from '@/features/collaboration/projects/projects.sto
 import { useUsersStore } from '@n8n/stores/users.store';
 import { useSourceControlStore } from '@/features/integrations/sourceControl.ee/sourceControl.store';
 import { getResourcePermissions } from '@n8n/permissions';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import { useI18n } from '@n8n/i18n';
 import type { IconOrEmoji } from '@n8n/design-system';
 
@@ -70,6 +71,9 @@ const valueValidationRules: Array<Rule | RuleGroup> = [
 function getInitialProjectId() {
 	if (props.variable) return props.variable.project?.id;
 	if (props.projectId !== undefined) return props.projectId;
+	if (!hasPermission(['instanceOwner'])) {
+		return projectsStore.personalProject?.id ?? projectsStore.currentProjectId;
+	}
 	return projectsStore.currentProjectId;
 }
 
@@ -196,6 +200,9 @@ const selectedProjectIcon = computed<IconOrEmoji>(() => {
 });
 
 const showScopeField = computed(() => {
+	if (!hasPermission(['instanceOwner'])) {
+		return false;
+	}
 	// Hidden when the caller already chose a scope (projectId prop) or we're in a project
 	return props.mode === 'new' && props.projectId === undefined && !projectsStore.currentProjectId;
 });
@@ -219,7 +226,9 @@ async function handleSubmit() {
 			value: form.value,
 		};
 
-		if (typeof form.projectId !== 'undefined') {
+		if (!hasPermission(['instanceOwner'])) {
+			variablePayload.projectId = projectsStore.personalProject?.id ?? form.projectId;
+		} else if (typeof form.projectId !== 'undefined') {
 			variablePayload.projectId = form.projectId;
 		}
 

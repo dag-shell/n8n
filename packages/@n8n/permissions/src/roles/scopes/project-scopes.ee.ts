@@ -119,6 +119,11 @@ export const PERSONAL_PROJECT_OWNER_SCOPES: Scope[] = [
 	'dataTable:writeRow',
 	'dataTable:readColumn',
 	'dataTable:writeColumn',
+	'projectVariable:list',
+	'projectVariable:read',
+	'projectVariable:create',
+	'projectVariable:update',
+	'projectVariable:delete',
 ];
 
 export const PROJECT_EDITOR_SCOPES: Scope[] = [

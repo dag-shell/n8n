@@ -17,6 +17,7 @@ import { usePageRedirectionHelper } from '@/app/composables/usePageRedirectionHe
 import { EnterpriseEditionFeature, MODAL_CONFIRM } from '@/app/constants';
 import { VARIABLE_MODAL_KEY } from '@/features/settings/environments.ee/environments.constants';
 import { getResourcePermissions } from '@n8n/permissions';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import {
 	N8nEmptyState,
 	N8nBadge,
@@ -68,7 +69,10 @@ const globalPermissions = computed(
 	() => getResourcePermissions(usersStore.currentUser?.globalScopes).variable,
 );
 const projectPermissions = computed(
-	() => getResourcePermissions(projectsStore.currentProject?.scopes).projectVariable,
+	() =>
+		getResourcePermissions(
+			projectsStore.currentProject?.scopes ?? projectsStore.personalProject?.scopes,
+		).projectVariable,
 );
 const { isLoading, execute } = useAsyncState(environmentsStore.fetchAllVariables, [], {
 	immediate: true,
@@ -79,7 +83,13 @@ const isFeatureEnabled = computed(
 );
 
 const openCreateVariableModal = () => {
-	uiStore.openModalWithData({ name: VARIABLE_MODAL_KEY, data: { mode: 'new' } });
+	const initialProjectId =
+		projectId ||
+		(!hasPermission(['instanceOwner']) ? projectsStore.personalProject?.id : undefined);
+	uiStore.openModalWithData({
+		name: VARIABLE_MODAL_KEY,
+		data: { mode: 'new', projectId: initialProjectId },
+	});
 	telemetry.track('User clicked add variable button');
 };
 
@@ -87,9 +97,11 @@ const openEditVariableModal = (variable: EnvironmentVariable) => {
 	uiStore.openModalWithData({ name: VARIABLE_MODAL_KEY, data: { mode: 'edit', variable } });
 };
 
-const variables = computed<VariableResource[]>(() =>
-	environmentsStore.variables
-		.filter((v) => !projectId || v.project?.id === projectId)
+const variables = computed<VariableResource[]>(() => {
+	const currentProjId =
+		projectId || (!hasPermission(['instanceOwner']) ? projectsStore.personalProject?.id : null);
+	return environmentsStore.variables
+		.filter((v) => !currentProjId || v.project?.id === currentProjId)
 		.map(
 			(variable) =>
 				({
@@ -100,8 +112,8 @@ const variables = computed<VariableResource[]>(() =>
 					value: variable.value,
 					project: variable.project,
 				}) as VariableResource,
-		),
-);
+		);
+});
 
 const globalVariables = computed(() => environmentsStore.variables.filter((v) => !v.project));
 
@@ -132,7 +144,7 @@ const columns = computed(() => {
 		},
 	];
 
-	if (!projectId) {
+	if (!projectId && hasPermission(['instanceOwner'])) {
 		cols.push({
 			id: 3,
 			path: 'project',
@@ -337,7 +349,7 @@ onMounted(() => {
 					@update:model-value="setKeyValue('incomplete', $event)"
 				/>
 			</div>
-			<div v-if="!projectId" class="mb-s">
+			<div v-if="!projectId && hasPermission(['instanceOwner'])" class="mb-s">
 				<N8nInputLabel
 					:label="i18n.baseText('forms.resourceFiltersDropdown.owner')"
 					:bold="false"
@@ -410,7 +422,7 @@ onMounted(() => {
 				<td>
 					<VariablesUsageBadge v-if="data.key" :name="data.key" />
 				</td>
-				<td v-if="!projectId">
+				<td v-if="!projectId && hasPermission(['instanceOwner'])">
 					<N8nBadge>
 						<div class="scope-badge" style="display: flex; align-items: center; gap: 4px">
 							<N8nIcon v-if="data.project" icon="layers" />

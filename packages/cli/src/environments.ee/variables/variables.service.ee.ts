@@ -6,7 +6,7 @@ import {
 import { LicenseState } from '@n8n/backend-common';
 import { UNLIMITED_LICENSE_QUOTA } from '@n8n/constants';
 import type { User, Variables } from '@n8n/db';
-import { generateNanoId, VariablesRepository } from '@n8n/db';
+import { generateNanoId, VariablesRepository, GLOBAL_OWNER_ROLE, ProjectRepository } from '@n8n/db';
 import { Service } from '@n8n/di';
 import { hasGlobalScope, Scope } from '@n8n/permissions';
 
@@ -35,6 +35,7 @@ export class VariablesService {
 		private readonly eventService: EventService,
 		private readonly licenseState: LicenseState,
 		private readonly projectService: ProjectService,
+		private readonly projectRepository: ProjectRepository,
 	) {}
 
 	private async findAll() {
@@ -102,6 +103,22 @@ export class VariablesService {
 		filter: { state?: 'empty'; projectId?: string | null } = {},
 	): Promise<Variables[]> {
 		const allCachedVariables = await this.getAllCached();
+
+		const stateAndProjectFilter = (variable: Variables) =>
+			// State filter
+			(filter.state !== 'empty' || variable.value === '') &&
+			// Project filter
+			(typeof filter.projectId === 'undefined' ||
+				(variable.project?.id ?? null) === filter.projectId);
+
+		if (user.role !== GLOBAL_OWNER_ROLE) {
+			const personalProject = await this.projectRepository.getPersonalProjectForUser(user.id);
+			const personalProjectId = personalProject?.id;
+			return allCachedVariables.filter(
+				(variable) => variable.project?.id === personalProjectId && stateAndProjectFilter(variable),
+			);
+		}
+
 		const canListGlobalVariables = hasGlobalScope(user, 'variable:list');
 		const projectIds = await this.projectService.getProjectIdsWithScope(user, [
 			'projectVariable:list',
@@ -113,13 +130,6 @@ export class VariablesService {
 			(variable.project &&
 				// Project variable access
 				projectIds.includes(variable.project.id));
-
-		const stateAndProjectFilter = (variable: Variables) =>
-			// State filter
-			(filter.state !== 'empty' || variable.value === '') &&
-			// Project filter
-			(typeof filter.projectId === 'undefined' ||
-				(variable.project?.id ?? null) === filter.projectId);
 
 		return allCachedVariables.filter(
 			(variable) => userHasAccess(variable) && stateAndProjectFilter(variable),
@@ -221,6 +231,11 @@ export class VariablesService {
 	}
 
 	async create(user: User, variable: CreateVariableRequestDto): Promise<Variables> {
+		if (user.role !== GLOBAL_OWNER_ROLE) {
+			const personalProject = await this.projectRepository.getPersonalProjectForUserOrFail(user.id);
+			variable.projectId = personalProject.id;
+		}
+
 		const userHasRight = await this.isAuthorizedForVariable(
 			user,
 			'variable:create',
@@ -266,6 +281,11 @@ export class VariablesService {
 		const existingVariable = await this.getCached(id);
 		if (!existingVariable) {
 			throw new NotFoundError(`Variable with id ${id} not found`);
+		}
+
+		if (user.role !== GLOBAL_OWNER_ROLE) {
+			const personalProject = await this.projectRepository.getPersonalProjectForUserOrFail(user.id);
+			variable.projectId = personalProject.id;
 		}
 
 		const userHasRightOnExistingVariable = await this.isAuthorizedForVariable(

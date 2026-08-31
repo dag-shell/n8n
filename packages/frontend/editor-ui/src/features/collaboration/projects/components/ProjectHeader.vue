@@ -142,10 +142,10 @@ const projectName = computed(() => {
 });
 
 const projectPermissions = computed(
-	() => getResourcePermissions(projectsStore.currentProject?.scopes).project,
+	() => getResourcePermissions(homeProject.value?.scopes).project,
 );
 const projectVariablePermissions = computed(
-	() => getResourcePermissions(projectsStore.currentProject?.scopes).projectVariable,
+	() => getResourcePermissions(homeProject.value?.scopes).projectVariable,
 );
 const globalVariablesPermissions = computed(
 	() => getResourcePermissions(usersStore.currentUser?.globalScopes).variable,
