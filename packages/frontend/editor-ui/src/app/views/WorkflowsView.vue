@@ -101,7 +101,6 @@ import {
 	N8nButton,
 	N8nCallout,
 	N8nCard,
-	N8nCheckbox,
 	N8nIcon,
 	N8nInfoTip,
 	N8nInlineTextEdit,
@@ -110,6 +109,7 @@ import {
 	N8nLoading,
 	N8nOption,
 	N8nSelect,
+	N8nSwitch2,
 	N8nText,
 	N8nTooltip,
 } from '@n8n/design-system';
@@ -1242,6 +1242,11 @@ const onShowArchived = async () => {
 	await onFiltersUpdated();
 };
 
+const onShowArchivedToggle = async (value: boolean) => {
+	filters.value.showArchived = value;
+	await onFiltersUpdated();
+};
+
 const handleDismissReadyToRunCallout = () => {
 	readyToRunWorkflowsStore.dismissCallout();
 	readyToRunWorkflowsStore.trackDismissCallout();
@@ -2317,39 +2322,50 @@ const onNameSubmit = async (name: string) => {
 			</N8nCallout>
 		</template>
 		<template #breadcrumbs>
-			<div v-if="breadcrumbsLoading" :class="$style['breadcrumbs-loading']">
-				<N8nLoading :loading="breadcrumbsLoading" :rows="1" variant="p" />
-			</div>
-			<div
-				v-else-if="showMainBreadcrumbs"
-				:class="$style['breadcrumbs-container']"
-				data-test-id="main-breadcrumbs"
-			>
-				<FolderBreadcrumbs
-					:current-folder="currentFolderParent"
-					:actions="breadcrumbsActions"
-					:hidden-items-trigger="isDragging ? 'hover' : 'click'"
-					:current-folder-as-link="true"
-					@item-selected="onBreadcrumbItemClick"
-					@action="onBreadCrumbsAction"
-					@item-drop="onBreadCrumbsItemDrop"
-					@project-drop="moveFolderToProjectRoot"
+			<div :class="$style['breadcrumbs-and-toggles']">
+				<div v-if="breadcrumbsLoading" :class="$style['breadcrumbs-loading']">
+					<N8nLoading :loading="breadcrumbsLoading" :rows="1" variant="p" />
+				</div>
+				<div
+					v-else-if="showMainBreadcrumbs"
+					:class="$style['breadcrumbs-container']"
+					data-test-id="main-breadcrumbs"
 				>
-					<template v-if="currentFolder" #append>
-						<span :class="$style['path-separator']">/</span>
-						<N8nInlineTextEdit
-							ref="renameInput"
-							:key="currentFolder?.id"
-							data-test-id="breadcrumbs-item-current"
-							:placeholder="i18n.baseText('folders.rename.placeholder')"
-							:model-value="currentFolder.name"
-							:max-length="30"
-							:read-only="readOnlyEnv || !hasPermissionToUpdateFolders"
-							:class="{ [$style.name]: true, [$style['pointer-disabled']]: isDragging }"
-							@update:model-value="onNameSubmit"
-						/>
-					</template>
-				</FolderBreadcrumbs>
+					<FolderBreadcrumbs
+						:current-folder="currentFolderParent"
+						:actions="breadcrumbsActions"
+						:hidden-items-trigger="isDragging ? 'hover' : 'click'"
+						:current-folder-as-link="true"
+						@item-selected="onBreadcrumbItemClick"
+						@action="onBreadCrumbsAction"
+						@item-drop="onBreadCrumbsItemDrop"
+						@project-drop="moveFolderToProjectRoot"
+					>
+						<template v-if="currentFolder" #append>
+							<span :class="$style['path-separator']">/</span>
+							<N8nInlineTextEdit
+								ref="renameInput"
+								:key="currentFolder?.id"
+								data-test-id="breadcrumbs-item-current"
+								:placeholder="i18n.baseText('folders.rename.placeholder')"
+								:model-value="currentFolder.name"
+								:max-length="30"
+								:read-only="readOnlyEnv || !hasPermissionToUpdateFolders"
+								:class="{ [$style.name]: true, [$style['pointer-disabled']]: isDragging }"
+								@update:model-value="onNameSubmit"
+							/>
+						</template>
+					</FolderBreadcrumbs>
+				</div>
+				<div :class="$style['show-archived-toggle']">
+					<N8nSwitch2
+						:model-value="filters.showArchived || false"
+						:label="i18n.baseText('workflows.filters.showArchived')"
+						size="small"
+						data-test-id="show-archived-switch"
+						@update:model-value="onShowArchivedToggle"
+					/>
+				</div>
 			</div>
 		</template>
 		<template #item="{ item: data, index }">
@@ -2506,14 +2522,6 @@ const onNameSubmit = async (name: string) => {
 					</N8nOption>
 				</N8nSelect>
 			</div>
-			<div class="mb-s">
-				<N8nCheckbox
-					:label="i18n.baseText('workflows.filters.showArchived')"
-					:model-value="filters.showArchived || false"
-					data-test-id="show-archived-checkbox"
-					@update:model-value="setKeyValue('showArchived', $event)"
-				/>
-			</div>
 		</template>
 		<template #postamble>
 			<!-- Empty states for shared section and folders -->
@@ -2580,6 +2588,20 @@ const onNameSubmit = async (name: string) => {
 		align-items: center;
 		gap: var(--spacing--md);
 	}
+}
+
+.breadcrumbs-and-toggles {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--sm);
+	min-height: 32px;
+}
+
+.show-archived-toggle {
+	display: flex;
+	align-items: center;
+	white-space: nowrap;
+	--switch--color--background--active: var(--color--primary);
 }
 
 .breadcrumbs-container {

@@ -170,7 +170,11 @@ const workflowMenuItems = computed<Array<ActionDropdownItem<WORKFLOW_MENU_ACTION
 		});
 	}
 
-	if (isSharingEnabled.value && props.workflowPermissions.share) {
+	if (
+		hasPermission(['instanceOwner']) &&
+		isSharingEnabled.value &&
+		props.workflowPermissions.share
+	) {
 		organization.push({
 			id: WORKFLOW_MENU_ACTIONS.SHARE,
 			label: locale.baseText('workflowDetails.share'),
@@ -262,6 +266,15 @@ const workflowMenuItems = computed<Array<ActionDropdownItem<WORKFLOW_MENU_ACTION
 				disabled: props.isNewWorkflow,
 				customClass: $style.deleteItem,
 			});
+
+			if (!hasPermission(['instanceOwner'])) {
+				lifecycle.push({
+					id: WORKFLOW_MENU_ACTIONS.DELETE,
+					label: locale.baseText('menuActions.delete'),
+					disabled: props.isNewWorkflow,
+					customClass: $style.deleteItem,
+				});
+			}
 		}
 	}
 

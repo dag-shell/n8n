@@ -194,7 +194,7 @@ const actions = computed(() => {
 		},
 	];
 
-	if (workflowPermissions.value.share) {
+	if (hasPermission(['instanceOwner']) && workflowPermissions.value.share) {
 		items.push({
 			label: locale.baseText('workflows.item.share'),
 			value: WORKFLOW_LIST_ITEM_ACTIONS.SHARE,
@@ -240,6 +240,13 @@ const actions = computed(() => {
 				label: locale.baseText('workflows.item.archive'),
 				value: WORKFLOW_LIST_ITEM_ACTIONS.ARCHIVE,
 			});
+
+			if (!hasPermission(['instanceOwner'])) {
+				items.push({
+					label: locale.baseText('workflows.item.delete'),
+					value: WORKFLOW_LIST_ITEM_ACTIONS.DELETE,
+				});
+			}
 		} else {
 			items.push({
 				label: locale.baseText('workflows.item.delete'),

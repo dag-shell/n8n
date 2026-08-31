@@ -8,4 +8,5 @@ Variables
 Data tables ...to sidebar
 
 
-[ ] 
+[ ] excution before and after usage anaytlics and stopping the excution of it
+[ ] and overview page for each dasboard

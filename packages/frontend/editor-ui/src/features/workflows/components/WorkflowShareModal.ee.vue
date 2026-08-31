@@ -5,6 +5,7 @@ import { createEventBus } from '@n8n/utils/event-bus';
 import EnterpriseEdition from '@/app/components/EnterpriseEdition.ee.vue';
 import Modal from '@/app/components/Modal.vue';
 import { EnterpriseEditionFeature, MODAL_CONFIRM, WORKFLOW_SHARE_MODAL_KEY } from '@/app/constants';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 import { getResourcePermissions } from '@n8n/permissions';
 import { useMessage } from '@/app/composables/useMessage';
 import { useToast } from '@n8n/composables/useToast';
@@ -254,6 +255,10 @@ const initialize = async () => {
 };
 
 onMounted(async () => {
+	if (!hasPermission(['instanceOwner'])) {
+		uiStore.closeModal(WORKFLOW_SHARE_MODAL_KEY);
+		return;
+	}
 	await initialize();
 });
 
