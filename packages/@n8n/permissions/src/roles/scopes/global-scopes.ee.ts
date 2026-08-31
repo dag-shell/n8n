@@ -189,7 +189,6 @@ export const GLOBAL_MEMBER_SCOPES: Scope[] = [
 	'tag:read',
 	'tag:update',
 	'tag:list',
-	'user:list',
 	'variable:list',
 	'variable:read',
 	'dataTable:list',
@@ -202,13 +201,7 @@ export const GLOBAL_MEMBER_SCOPES: Scope[] = [
 	'chatHubAgent:update',
 	'chatHubAgent:delete',
 	'chatHubAgent:list',
-	'apiKey:list',
-	'apiKey:create',
-	'apiKey:delete',
-	'apiKey:update',
-	'credentialResolver:list',
 	'instanceAi:message',
-	'instanceAi:gateway',
 ];
 
 export const GLOBAL_CHAT_USER_SCOPES: Scope[] = [

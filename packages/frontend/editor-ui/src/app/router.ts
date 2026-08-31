@@ -238,7 +238,7 @@ export const routes: RouteRecordRaw[] = [
 					};
 				},
 			},
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 	},
 	// Template setup view, this is the landing view for website users
@@ -260,7 +260,7 @@ export const routes: RouteRecordRaw[] = [
 					};
 				},
 			},
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		beforeEnter: (to, _from, next) => {
 			const posthogStore = usePostHog();
@@ -294,7 +294,7 @@ export const routes: RouteRecordRaw[] = [
 			setScrollPosition(pos: number) {
 				this.scrollOffset = pos;
 			},
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		beforeEnter: (_to, _from, next) => {
 			const templatesStore = useTemplatesStore();
@@ -310,7 +310,7 @@ export const routes: RouteRecordRaw[] = [
 		name: VIEWS.RESOURCE_CENTER,
 		component: ResourceCenterView,
 		meta: {
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		beforeEnter: (_to, _from, next) => {
 			const posthogStore = usePostHog();
@@ -435,7 +435,7 @@ export const routes: RouteRecordRaw[] = [
 			templatesEnabled: true,
 			keepWorkflowAlive: true,
 			getRedirect: getTemplatesRedirect,
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 	},
 	{
@@ -447,7 +447,7 @@ export const routes: RouteRecordRaw[] = [
 			templatesEnabled: true,
 			keepWorkflowAlive: true,
 			getRedirect: () => getTemplatesRedirect(VIEWS.NEW_WORKFLOW),
-			middleware: ['authenticated'],
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 	},
 	{
@@ -617,6 +617,7 @@ export const routes: RouteRecordRaw[] = [
 		},
 		meta: {
 			layout: 'settings',
+			middleware: ['authenticated', 'instanceOwner'],
 		},
 		children: [
 			{
@@ -1265,8 +1266,13 @@ router.beforeEach(async (to: RouteLocationNormalized, from, next) => {
 		 * Verify user permissions for current route
 		 */
 
-		const routeMiddleware = to.meta?.middleware ?? [];
-		const routeMiddlewareOptions = to.meta?.middlewareOptions ?? {};
+		const routeMiddleware = Array.from(
+			new Set(to.matched.flatMap((record) => record.meta?.middleware ?? [])),
+		);
+		const routeMiddlewareOptions = to.matched.reduce(
+			(acc, record) => ({ ...acc, ...record.meta?.middlewareOptions }),
+			{} as Record<string, unknown>,
+		);
 		for (const middlewareName of routeMiddleware) {
 			let nextCalled = false;
 			const middlewareNext = ((location: RouteLocationRaw): void => {

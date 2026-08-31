@@ -6,6 +6,7 @@ import { rbacMiddleware } from '@/app/utils/rbac/middleware/rbac';
 import { roleMiddleware } from '@/app/utils/rbac/middleware/role';
 import { customMiddleware } from '@/app/utils/rbac/middleware/custom';
 import { defaultUserMiddleware } from '@/app/utils/rbac/middleware/defaultUser';
+import { instanceOwnerMiddleware } from '@/app/utils/rbac/middleware/instanceOwner';
 
 type Middleware = {
 	[key in RouterMiddlewareType]: RouterMiddleware<MiddlewareOptions[key]>;
@@ -15,6 +16,7 @@ export const middleware: Middleware = {
 	authenticated: authenticatedMiddleware,
 	custom: customMiddleware,
 	defaultUser: defaultUserMiddleware,
+	instanceOwner: instanceOwnerMiddleware,
 	enterprise: enterpriseMiddleware,
 	guest: guestMiddleware,
 	rbac: rbacMiddleware,

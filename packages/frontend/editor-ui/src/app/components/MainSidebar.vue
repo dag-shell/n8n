@@ -104,7 +104,7 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		icon: { type: 'icon', value: 'lightbulb', color: 'primary' },
 		label: i18n.baseText('experiments.resourceCenter.sidebar'),
 		position: 'bottom',
-		available: isResourceCenterEnabled.value,
+		available: isResourceCenterEnabled.value && hasPermission(['instanceOwner']),
 		route: { to: { name: VIEWS.RESOURCE_CENTER } },
 	},
 	{
@@ -116,7 +116,8 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		available:
 			settingsStore.isTemplatesEnabled &&
 			templatesStore.hasCustomTemplatesHost &&
-			!isResourceCenterEnabled.value,
+			!isResourceCenterEnabled.value &&
+			hasPermission(['instanceOwner']),
 		route: { to: { name: VIEWS.TEMPLATES } },
 	},
 	{
@@ -128,7 +129,8 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		available:
 			settingsStore.isTemplatesEnabled &&
 			!templatesStore.hasCustomTemplatesHost &&
-			!isResourceCenterEnabled.value,
+			!isResourceCenterEnabled.value &&
+			hasPermission(['instanceOwner']),
 		link: {
 			href: templatesStore.websiteTemplateRepositoryURL,
 			target: '_blank',
@@ -150,6 +152,7 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		label: i18n.baseText('mainSidebar.help'),
 		notification: showWhatsNewNotification.value,
 		position: 'bottom',
+		available: hasPermission(['instanceOwner']),
 		children: [
 			{
 				id: 'quickstart',
@@ -208,7 +211,7 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		id: 'settings',
 		label: i18n.baseText('mainSidebar.settings'),
 		icon: 'settings',
-		available: true,
+		available: hasPermission(['instanceOwner']),
 		children: settingsItems.value,
 	},
 ]);
@@ -237,7 +240,7 @@ watch(isCollapsed, () => {
 
 onMounted(() => {
 	basePath.value = rootStore.baseUrl;
-	if (isAiGatewayEnabled.value) void fetchWallet();
+	if (isAiGatewayEnabled.value && hasPermission(['instanceOwner'])) void fetchWallet();
 
 	void nextTick(() => {
 		checkOverflow();
@@ -363,6 +366,7 @@ useKeybindings({
 	>
 		<MainSidebarHeader
 			:is-collapsed="isCollapsed"
+			:hide-create="!hasPermission(['instanceOwner'])"
 			@collapse="toggleCollapse"
 			@open-command-bar="openCommandBar"
 		/>

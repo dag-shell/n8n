@@ -26,7 +26,11 @@ const {
 const isDemoMode = computed(() => route.name === VIEWS.DEMO);
 
 const showCommandBar = computed(
-	() => hasPermission(['authenticated']) && !isDemoMode.value && !settingsStore.isCanvasOnly,
+	() =>
+		hasPermission(['authenticated']) &&
+		hasPermission(['instanceOwner']) &&
+		!isDemoMode.value &&
+		!settingsStore.isCanvasOnly,
 );
 
 watch(showCommandBar, (newVal) => {

@@ -18,6 +18,7 @@ import { useSourceControlStore } from '@/features/integrations/sourceControl.ee/
 import KeyboardShortcutTooltip from '@/app/components/KeyboardShortcutTooltip.vue';
 import { useSettingsStore } from '@n8n/stores/settings.store';
 import { useGlobalEntityCreation } from '@/app/composables/useGlobalEntityCreation';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 defineProps<{
 	isCollapsed: boolean;
 	hideCreate?: boolean;
@@ -161,7 +162,7 @@ const {
 			</template>
 		</N8nNavigationDropdown>
 		<KeyboardShortcutTooltip
-			v-if="!settingsStore.isCanvasOnly"
+			v-if="!settingsStore.isCanvasOnly && hasPermission(['instanceOwner'])"
 			:placement="isCollapsed ? 'right' : 'bottom'"
 			:show-after="500"
 			:label="i18n.baseText('nodeView.openCommandBar')"

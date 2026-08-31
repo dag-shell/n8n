@@ -251,6 +251,7 @@ export class AiController {
 
 	@Licensed('feat:aiGateway')
 	@Get('/gateway/config')
+	@GlobalScope('instanceAi:manage')
 	async getGatewayConfig(): Promise<AiGatewayConfigDto> {
 		this.aiGatewayService.assertEnabled();
 		try {
@@ -263,6 +264,7 @@ export class AiController {
 
 	@Licensed('feat:aiGateway')
 	@Get('/gateway/wallet')
+	@GlobalScope('instanceAi:manage')
 	async getGatewayWallet(req: AuthenticatedRequest): Promise<AiGatewayWalletResponse> {
 		this.aiGatewayService.assertEnabled();
 		try {
@@ -275,6 +277,7 @@ export class AiController {
 
 	@Licensed('feat:aiGateway')
 	@Get('/gateway/usage')
+	@GlobalScope('instanceAi:manage')
 	async getGatewayUsage(
 		req: AuthenticatedRequest,
 		_: Response,
@@ -291,6 +294,7 @@ export class AiController {
 
 	@Licensed('feat:aiBuilder')
 	@Get('/build/credits')
+	@GlobalScope('instanceAi:manage')
 	async getBuilderCredits(
 		req: AuthenticatedRequest,
 		_: Response,
