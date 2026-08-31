@@ -18,11 +18,22 @@ import { usePushConnectionStore } from '@/app/stores/pushConnection.store';
 import { useI18n } from '@n8n/i18n';
 import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { useSettingsStore } from '@n8n/stores/settings.store';
+import PageViewLayout from '@/app/components/layouts/PageViewLayout.vue';
+import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 
-import { N8nEmptyState, N8nButton, N8nHeading, N8nNotice } from '@n8n/design-system';
+import {
+	N8nEmptyState,
+	N8nButton,
+	N8nHeading,
+	N8nNotice,
+	N8nInput,
+	N8nIcon,
+	N8nText,
+} from '@n8n/design-system';
 const PACKAGE_COUNT_THRESHOLD = 31;
 
 const loading = ref(false);
+const searchQuery = ref('');
 
 const router = useRouter();
 const pushConnection = usePushConnection({ router });
@@ -154,82 +165,115 @@ onBeforeUnmount(() => {
 	pushStore.pushDisconnect();
 	pushConnection.terminate();
 });
+const filteredInstalledPackages = computed(() => {
+	const all = communityNodesStore.getInstalledPackages;
+	if (!searchQuery.value.trim()) return all;
+	const q = searchQuery.value.toLowerCase().trim();
+	return all.filter(
+		(p) =>
+			p.packageName.toLowerCase().includes(q) ||
+			p.installedNodes.some((n) => n.name.toLowerCase().includes(q)),
+	);
+});
 </script>
 
 <template>
-	<div :class="$style.container">
-		<div :class="$style.headingContainer">
-			<N8nHeading size="2xlarge">{{ i18n.baseText('settings.communityNodes') }}</N8nHeading>
-			<N8nButton
-				v-if="canInstall && communityNodesStore.getInstalledPackages.length > 0 && !loading"
-				:label="i18n.baseText('settings.communityNodes.installModal.installButton.label')"
-				size="large"
-				@click="openInstallModal"
+	<PageViewLayout>
+		<template #header>
+			<ProjectHeader
+				:main-button="
+					canInstall && communityNodesStore.getInstalledPackages.length > 0 && !loading
+						? 'communityPackage'
+						: undefined
+				"
 			/>
-		</div>
-		<N8nNotice
-			v-if="isManagedByEnv"
-			class="mb-l"
-			:content="i18n.baseText('settings.communityNodes.managedByEnv')"
-			data-test-id="community-nodes-managed-by-env"
-		/>
-		<div v-if="loading" :class="$style.cardsContainer">
-			<CommunityPackageCard
-				v-for="n in 2"
-				:key="'index-' + n"
-				:loading="true"
-			></CommunityPackageCard>
-		</div>
-		<div
-			v-else-if="communityNodesStore.getInstalledPackages.length === 0"
-			:class="$style.actionBoxContainer"
-		>
-			<N8nEmptyState
-				:heading="getEmptyStateTitle"
-				:description="getEmptyStateDescription"
-				:button-text="getEmptyStateButtonText"
-				:button-disabled="!settingsStore.isUnverifiedPackagesEnabled"
-				:callout-text="actionBoxConfig.calloutText"
-				:callout-theme="actionBoxConfig.calloutTheme"
-				@click:button="onClickEmptyStateButton"
+		</template>
+
+		<div :class="$style.contentWrapper">
+			<N8nNotice
+				v-if="isManagedByEnv"
+				class="mb-l"
+				:content="i18n.baseText('settings.communityNodes.managedByEnv')"
+				data-test-id="community-nodes-managed-by-env"
 			/>
+
+			<!-- Search filter bar when packages are installed -->
+			<div v-if="communityNodesStore.getInstalledPackages.length > 0" :class="$style.filtersRow">
+				<N8nInput
+					v-model="searchQuery"
+					placeholder="Search community packages..."
+					size="medium"
+					clearable
+					:class="$style.search"
+				>
+					<template #prefix>
+						<N8nIcon icon="search" />
+					</template>
+				</N8nInput>
+			</div>
+
+			<div v-if="loading" :class="$style.cardsContainer">
+				<CommunityPackageCard v-for="n in 2" :key="'index-' + n" :loading="true" />
+			</div>
+			<div
+				v-else-if="communityNodesStore.getInstalledPackages.length === 0"
+				:class="$style.actionBoxContainer"
+			>
+				<N8nEmptyState
+					:heading="getEmptyStateTitle"
+					:description="getEmptyStateDescription"
+					:button-text="getEmptyStateButtonText"
+					:button-disabled="!settingsStore.isUnverifiedPackagesEnabled"
+					:callout-text="actionBoxConfig.calloutText"
+					:callout-theme="actionBoxConfig.calloutTheme"
+					@click:button="onClickEmptyStateButton"
+				/>
+			</div>
+			<div v-else-if="filteredInstalledPackages.length === 0" :class="$style.actionBoxContainer">
+				<N8nText color="text-light" size="medium">
+					No community packages matching "{{ searchQuery }}"
+				</N8nText>
+			</div>
+			<div v-else :class="$style.cardsContainer">
+				<CommunityPackageCard
+					v-for="communityPackage in filteredInstalledPackages"
+					:key="communityPackage.packageName"
+					:community-package="communityPackage"
+				/>
+			</div>
 		</div>
-		<div v-else :class="$style.cardsContainer">
-			<CommunityPackageCard
-				v-for="communityPackage in communityNodesStore.getInstalledPackages"
-				:key="communityPackage.packageName"
-				:community-package="communityPackage"
-			></CommunityPackageCard>
-		</div>
-	</div>
+	</PageViewLayout>
 </template>
 
 <style lang="scss" module>
-.container {
-	height: 100%;
-	padding-right: var(--spacing--2xs);
-	> * {
-		margin-bottom: var(--spacing--2xl);
-	}
+.contentWrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--md);
+	padding-top: var(--spacing--xs);
+	width: 100%;
 }
 
-.headingContainer {
+.filtersRow {
 	display: flex;
-	justify-content: space-between;
+	align-items: center;
+	justify-content: flex-end;
+	width: 100%;
 }
 
-.loadingContainer {
-	display: flex;
-	gap: var(--spacing--xs);
+.search {
+	width: 320px;
 }
 
 .actionBoxContainer {
 	text-align: center;
+	padding-top: var(--spacing--xl);
 }
 
 .cardsContainer {
 	display: flex;
 	flex-direction: column;
-	gap: var(--spacing--2xs);
+	gap: var(--spacing--xs);
+	width: 100%;
 }
 </style>

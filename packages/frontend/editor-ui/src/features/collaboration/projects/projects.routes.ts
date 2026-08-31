@@ -13,6 +13,8 @@ const ProjectSettings = async () => await import('./views/ProjectSettings.vue');
 const ExecutionsView = async () =>
 	await import('@/features/execution/executions/views/ExecutionsView.vue');
 const ProjectVariables = async () => await import('./views/ProjectVariables.vue');
+const SettingsCommunityNodesView = async () =>
+	await import('@/features/settings/communityNodes/views/SettingsCommunityNodesView.vue');
 
 function refreshInsightsSummary() {
 	void import('@/features/execution/insights')
@@ -85,6 +87,19 @@ const commonChildRoutes: RouteRecordRaw[] = [
 			},
 		},
 	},
+	{
+		path: 'community-packages',
+		component: SettingsCommunityNodesView,
+		meta: {
+			middleware: ['authenticated', 'custom'],
+			middlewareOptions: {
+				custom: () => {
+					const settingsStore = useSettingsStore();
+					return settingsStore.isCommunityNodesFeatureEnabled;
+				},
+			},
+		},
+	},
 ];
 
 const commonChildRouteExtensions = {
@@ -104,6 +119,9 @@ const commonChildRouteExtensions = {
 		{
 			name: VIEWS.HOME_VARIABLES,
 		},
+		{
+			name: VIEWS.HOME_COMMUNITY_PACKAGES,
+		},
 	],
 	projects: [
 		{
@@ -120,6 +138,9 @@ const commonChildRouteExtensions = {
 		},
 		{
 			name: VIEWS.PROJECTS_VARIABLES,
+		},
+		{
+			name: 'ProjectsCommunityPackages',
 		},
 	],
 };
@@ -248,5 +269,13 @@ export const projectsRoutes: RouteRecordRaw[] = [
 	{
 		path: '/variables',
 		redirect: '/home/variables',
+	},
+	{
+		path: '/community-packages',
+		redirect: '/home/community-packages',
+	},
+	{
+		path: '/community-nodes',
+		redirect: '/home/community-packages',
 	},
 ];

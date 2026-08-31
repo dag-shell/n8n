@@ -58,12 +58,6 @@ export function useInstallNode() {
 	};
 
 	const installNode = async (props: InstallNodeProps): Promise<InstallNodeResult> => {
-		if (!userStore.isAdminOrOwner) {
-			const error = new Error('User is not an owner or admin');
-			toast.showError(error, i18n.baseText('settings.communityNodes.messages.install.error'));
-			return { success: false, error };
-		}
-
 		if (props.telemetry) {
 			telemetry.track('user started cnr package install', {
 				input_string: props.packageName,

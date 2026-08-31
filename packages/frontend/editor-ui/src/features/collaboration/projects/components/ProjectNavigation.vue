@@ -129,6 +129,15 @@ const dataTablesItem = computed<IMenuItem>(() => ({
 	},
 }));
 
+const communityPackagesItem = computed<IMenuItem>(() => ({
+	id: 'community-packages',
+	label: locale.baseText('settings.communityNodes'),
+	icon: 'box',
+	route: {
+		to: { name: VIEWS.HOME_COMMUNITY_PACKAGES },
+	},
+}));
+
 const isWorkflowsActive = computed(() => {
 	const currentName = route.name as string;
 	return [
@@ -162,6 +171,17 @@ const isVariablesActive = computed(() => {
 const isDataTablesActive = computed(() => {
 	const currentName = route.name as string;
 	return [DATA_TABLE_VIEW, 'data-table-details', 'project-data-tables'].includes(currentName);
+});
+
+const isCommunityPackagesActive = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.COMMUNITY_NODES,
+		VIEWS.HOME_COMMUNITY_PACKAGES,
+		'community-packages',
+		'community-nodes',
+		'ProjectsCommunityPackages',
+	].includes(currentName);
 });
 
 const shared = computed<IMenuItem>(() => ({
@@ -325,6 +345,18 @@ onBeforeUnmount(() => {
 						:compact="props.collapsed"
 						:active="isVariablesActive"
 						data-test-id="project-variables-menu-item"
+					/>
+				</div>
+
+				<div :class="$style.groupDivider" />
+
+				<!-- Group 4: Community Packages -->
+				<div :class="$style.navGroup">
+					<N8nMenuItem
+						:item="communityPackagesItem"
+						:compact="props.collapsed"
+						:active="isCommunityPackagesActive"
+						data-test-id="project-community-packages-menu-item"
 					/>
 				</div>
 			</template>

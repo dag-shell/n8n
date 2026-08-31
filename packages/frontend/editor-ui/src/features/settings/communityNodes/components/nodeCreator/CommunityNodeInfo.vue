@@ -179,7 +179,6 @@ onMounted(async () => {
 			:text="quickConnect?.text"
 			:disclaimer="quickConnect?.disclaimer"
 		/>
-		<ContactAdministratorToInstall v-if="!isAdminOrOwner && !communityNodeDetails?.installed" />
 	</div>
 </template>
 

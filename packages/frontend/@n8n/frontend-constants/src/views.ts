@@ -80,6 +80,7 @@ export enum VIEWS {
 	INSTANCE_ROLE_VIEW = 'InstanceRoleViewView',
 	PROJECTS_VARIABLES = 'ProjectsVariables',
 	HOME_VARIABLES = 'HomeVariables',
+	HOME_COMMUNITY_PACKAGES = 'HomeCommunityPackages',
 	FOLDERS = 'Folders',
 	PROJECTS_FOLDERS = 'ProjectsFolders',
 	INSIGHTS = 'Insights',

@@ -25,6 +25,7 @@ import {
 	DATA_TABLE_DETAILS,
 	ADD_DATA_TABLE_MODAL_KEY,
 } from '@/features/core/dataTable/constants';
+import { COMMUNITY_PACKAGE_INSTALL_MODAL_KEY } from '@/features/settings/communityNodes/communityNodes.constants';
 import { instanceAiCreateAgentRoute } from '@/features/ai/instanceAi/createAgentRoute';
 import { generateNanoId } from '@n8n/utils/generate-nano-id';
 import { useAgentPermissions } from '@/features/agents/composables/useAgentPermissions';
@@ -87,6 +88,16 @@ const headerIcon = computed((): IconOrEmoji => {
 			return { type: 'icon', value: 'braces' };
 		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
 			return { type: 'icon', value: 'table' };
+		} else if (
+			[
+				VIEWS.COMMUNITY_NODES,
+				VIEWS.HOME_COMMUNITY_PACKAGES,
+				'community-packages',
+				'community-nodes',
+				'ProjectsCommunityPackages',
+			].includes(currentName)
+		) {
+			return { type: 'icon', value: 'box' };
 		}
 	}
 
@@ -122,6 +133,16 @@ const projectName = computed(() => {
 			return i18n.baseText('mainSidebar.variables');
 		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
 			return i18n.baseText('dataTable.dataTables');
+		} else if (
+			[
+				VIEWS.COMMUNITY_NODES,
+				VIEWS.HOME_COMMUNITY_PACKAGES,
+				'community-packages',
+				'community-nodes',
+				'ProjectsCommunityPackages',
+			].includes(currentName)
+		) {
+			return i18n.baseText('settings.communityNodes');
 		}
 	}
 
@@ -197,6 +218,7 @@ const ACTION_TYPES = {
 	DATA_TABLE: 'dataTable',
 	VARIABLE: 'variable',
 	AGENT: 'agent',
+	COMMUNITY_PACKAGE: 'communityPackage',
 } as const;
 type ActionTypes = (typeof ACTION_TYPES)[keyof typeof ACTION_TYPES];
 
@@ -248,6 +270,14 @@ const createAgentButton = computed(() => ({
 	disabled: !canCreateAgent.value,
 }));
 
+const createCommunityPackageButton = computed(() => ({
+	value: ACTION_TYPES.COMMUNITY_PACKAGE,
+	label: i18n.baseText('settings.communityNodes.installModal.installButton.label'),
+	icon: undefined,
+	size: 'mini' as const,
+	disabled: false,
+}));
+
 const selectedMainButtonType = computed(() => {
 	if (props.mainButton === ACTION_TYPES.AGENT && !settingsStore.isModuleActive('agents')) {
 		return ACTION_TYPES.WORKFLOW;
@@ -265,6 +295,8 @@ const mainButtonConfig = computed(() => {
 			return createVariableButton.value;
 		case ACTION_TYPES.AGENT:
 			return createAgentButton.value;
+		case ACTION_TYPES.COMMUNITY_PACKAGE:
+			return createCommunityPackageButton.value;
 		case ACTION_TYPES.WORKFLOW:
 		default:
 			return createWorkflowButton.value;
@@ -438,6 +470,10 @@ const actions: Record<ActionTypes, (projectId: string, source: CreateSource) => 
 		agentTelemetry.trackClickedNewAgent(source, agentId);
 		void router.push(instanceAiCreateAgentRoute(projectId, agentId));
 	},
+	[ACTION_TYPES.COMMUNITY_PACKAGE]: () => {
+		uiStore.openModal(COMMUNITY_PACKAGE_INSTALL_MODAL_KEY);
+		telemetry.track('User clicked header install community package button');
+	},
 } as const;
 
 const pageType = computed(() => {
@@ -476,6 +512,19 @@ const sectionDescription = computed(() => {
 		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
 			return (
 				i18n.baseText('dataTable.description') || 'Manage and store your structured data tables.'
+			);
+		} else if (
+			[
+				VIEWS.COMMUNITY_NODES,
+				VIEWS.HOME_COMMUNITY_PACKAGES,
+				'community-packages',
+				'community-nodes',
+				'ProjectsCommunityPackages',
+			].includes(currentName)
+		) {
+			return (
+				i18n.baseText('settings.communityNodes.empty.description.no-packages') ||
+				'Install and manage node packages contributed by our community.'
 			);
 		}
 	}

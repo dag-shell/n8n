@@ -49,11 +49,7 @@ export function useInstalledCommunityPackage(nodeTypeName?: MaybeRefOrGetter<str
 	 * Update dialogs and button should not be shown when this is false.
 	 */
 	const isUpdateCheckAvailable = computed(() => {
-		return (
-			isCommunityNode.value &&
-			usersStore.isAdminOrOwner &&
-			!installedPackage.value?.unverifiedUpdate
-		);
+		return isCommunityNode.value && !installedPackage.value?.unverifiedUpdate;
 	});
 
 	return {

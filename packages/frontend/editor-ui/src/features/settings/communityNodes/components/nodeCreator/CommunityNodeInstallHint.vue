@@ -13,7 +13,7 @@ defineProps<Props>();
 </script>
 
 <template>
-	<div v-if="isAdminOrOwner" :class="$style.container">
+	<div :class="$style.container">
 		<N8nIcon color="text-light" icon="info" size="large" />
 		<N8nText color="text-base" size="medium"> {{ hint }} </N8nText>
 	</div>

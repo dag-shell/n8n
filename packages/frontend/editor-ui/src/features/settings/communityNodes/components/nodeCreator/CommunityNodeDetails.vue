@@ -133,7 +133,7 @@ const onInstall = async () => {
 				</div>
 
 				<N8nButton
-					v-if="isAdminOrOwner && !communityNodeDetails.installed"
+					v-if="!communityNodeDetails.installed"
 					:loading="loading"
 					:disabled="loading"
 					:label="i18n.baseText('communityNodeDetails.install')"
