@@ -128,7 +128,9 @@ const handleSourceControlPull = async () => {
 	// Bypass cache and fetch fresh data from API after pull
 	loading.value = true;
 	try {
-		const response = await dataTableStore.fetchDataTableDetails(props.id, props.projectId);
+		const response = props.projectId
+			? await dataTableStore.fetchDataTableDetails(props.id, props.projectId)
+			: await dataTableStore.fetchDataTableById(props.id);
 		if (response) {
 			dataTable.value = response;
 			documentTitle.set(`${i18n.baseText('dataTable.dataTables')} > ${response.name}`);

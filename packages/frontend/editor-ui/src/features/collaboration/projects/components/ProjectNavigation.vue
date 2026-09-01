@@ -138,6 +138,15 @@ const communityPackagesItem = computed<IMenuItem>(() => ({
 	},
 }));
 
+const mcpItem = computed<IMenuItem>(() => ({
+	id: 'mcp',
+	label: locale.baseText('settings.mcp'),
+	icon: 'mcp',
+	route: {
+		to: { name: VIEWS.HOME_MCP },
+	},
+}));
+
 const isWorkflowsActive = computed(() => {
 	const currentName = route.name as string;
 	return [
@@ -151,7 +160,7 @@ const isWorkflowsActive = computed(() => {
 
 const isCredentialsActive = computed(() => {
 	const currentName = route.name as string;
-	return [VIEWS.CREDENTIALS, VIEWS.CREDENTIAL_EDIT, VIEWS.CREDENTIAL_NEW].includes(
+	return [VIEWS.CREDENTIALS, VIEWS.PROJECTS_CREDENTIALS, VIEWS.SHARED_CREDENTIALS].includes(
 		currentName as VIEWS,
 	);
 });
@@ -181,6 +190,24 @@ const isCommunityPackagesActive = computed(() => {
 		'community-packages',
 		'community-nodes',
 		'ProjectsCommunityPackages',
+	].includes(currentName);
+});
+
+const isMcpActive = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.HOME_MCP,
+		VIEWS.HOME_MCP_WORKFLOWS,
+		VIEWS.HOME_MCP_AGENTS,
+		VIEWS.HOME_MCP_CLIENTS,
+		'McpSettings',
+		'McpSettingsWorkflows',
+		'McpSettingsAgents',
+		'McpSettingsClients',
+		'mcp',
+		'mcp-workflows',
+		'mcp-agents',
+		'mcp-clients',
 	].includes(currentName);
 });
 
@@ -332,7 +359,7 @@ onBeforeUnmount(() => {
 
 				<div :class="$style.groupDivider" />
 
-				<!-- Group 3: Credentials & Variables -->
+				<!-- Group 3: Credentials, Variables & MCP -->
 				<div :class="$style.navGroup">
 					<N8nMenuItem
 						:item="credentialsItem"
@@ -345,6 +372,12 @@ onBeforeUnmount(() => {
 						:compact="props.collapsed"
 						:active="isVariablesActive"
 						data-test-id="project-variables-menu-item"
+					/>
+					<N8nMenuItem
+						:item="mcpItem"
+						:compact="props.collapsed"
+						:active="isMcpActive"
+						data-test-id="project-mcp-menu-item"
 					/>
 				</div>
 

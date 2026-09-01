@@ -5,11 +5,7 @@ import { useDataTableStore } from '@/features/core/dataTable/dataTable.store';
 import { useUIStore } from '@/app/stores/ui.store';
 import { useToast } from '@n8n/composables/useToast';
 import { useRoute, useRouter } from 'vue-router';
-import {
-	DATA_TABLE_DETAILS,
-	PROJECT_DATA_TABLES,
-	DATA_TABLE_VIEW,
-} from '@/features/core/dataTable/constants';
+import { DATA_TABLE_DETAILS, PROJECT_DATA_TABLES } from '@/features/core/dataTable/constants';
 import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
 import { useTelemetry } from '@n8n/composables/useTelemetry';
 import { dataTableColumnNameSchema } from '@n8n/api-types';

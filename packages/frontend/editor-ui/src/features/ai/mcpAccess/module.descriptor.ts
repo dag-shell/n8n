@@ -11,6 +11,7 @@ import {
 	MCP_WORKFLOWS_VIEW,
 } from '@/features/ai/mcpAccess/mcp.constants';
 import { hasPermission } from '@/app/utils/rbac/permissions';
+import { VIEWS } from '@/app/constants';
 
 const i18n = useI18n();
 
@@ -83,7 +84,7 @@ export const MCPModule: FrontendModuleDescription = {
 			icon: 'mcp',
 			label: i18n.baseText('settings.mcp'),
 			position: 'top',
-			route: { to: { name: MCP_SETTINGS_VIEW } },
+			route: { to: { name: VIEWS.HOME_MCP } },
 			get available() {
 				return hasPermission(['rbac'], {
 					rbac: { scope: ['mcp:manage', 'mcp:oauth', 'mcpApiKey:create', 'mcpApiKey:rotate'] },

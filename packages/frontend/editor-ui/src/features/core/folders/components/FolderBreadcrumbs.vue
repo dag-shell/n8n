@@ -5,6 +5,7 @@ import { ProjectTypes } from '@/features/collaboration/projects/projects.types';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useFoldersStore } from '../folders.store';
 import type { FolderPathItem, FolderShortInfo } from '../folders.types';
+import type { IUser } from 'n8n-workflow';
 import ProjectBreadcrumb from '@/features/core/folders/components/ProjectBreadcrumb.vue';
 import { hasPermission } from '@/app/utils/rbac/permissions';
 import {

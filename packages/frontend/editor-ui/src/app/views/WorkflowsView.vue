@@ -79,7 +79,6 @@ import { useWorkflowsListStore } from '@/app/stores/workflowsList.store';
 import { useCredentialsStore } from '@/features/credentials/credentials.store';
 import { useEnvironmentsStore } from '@/features/settings/environments.ee/environments.store';
 import { useDataTableStore } from '@/features/core/dataTable/dataTable.store';
-import { MCP_SETTINGS_VIEW } from '@/features/ai/mcpAccess/mcp.constants';
 import { useMCPStore } from '@/features/ai/mcpAccess/mcp.store';
 import type { ToggleWorkflowsMcpAccessResponse } from '@/features/ai/mcpAccess/mcp.api';
 import {
@@ -461,7 +460,7 @@ const showMcpAccessActions = computed(
 		hasPermissionToUpdateWorkflows.value,
 );
 
-const settingsLink = computed(() => router.resolve({ name: MCP_SETTINGS_VIEW }).href);
+const settingsLink = computed(() => router.resolve({ name: VIEWS.HOME_MCP }).href);
 
 const mcpAccessBreadcrumbsAction = computed<BreadcrumbAction | null>(() => {
 	if (!showMcpAccessActions.value || !mcpAccessScope.value) return null;

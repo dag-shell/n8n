@@ -1,5 +1,4 @@
 import { useCommunityNodesStore } from '../communityNodes.store';
-import { useUsersStore } from '@n8n/stores/users.store';
 import { isCommunityPackageName } from 'n8n-workflow';
 import {
 	type ExtendedPublicInstalledPackage,
@@ -9,7 +8,6 @@ import { computed, type MaybeRefOrGetter, onMounted, ref, watch, toValue } from 
 
 export function useInstalledCommunityPackage(nodeTypeName?: MaybeRefOrGetter<string | undefined>) {
 	const communityNodesStore = useCommunityNodesStore();
-	const usersStore = useUsersStore();
 
 	const installedPackage = ref<ExtendedPublicInstalledPackage | undefined>(undefined);
 

@@ -21,15 +21,7 @@ import { useSettingsStore } from '@n8n/stores/settings.store';
 import PageViewLayout from '@/app/components/layouts/PageViewLayout.vue';
 import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 
-import {
-	N8nEmptyState,
-	N8nButton,
-	N8nHeading,
-	N8nNotice,
-	N8nInput,
-	N8nIcon,
-	N8nText,
-} from '@n8n/design-system';
+import { N8nEmptyState, N8nNotice, N8nInput, N8nIcon, N8nText } from '@n8n/design-system';
 const PACKAGE_COUNT_THRESHOLD = 31;
 
 const loading = ref(false);

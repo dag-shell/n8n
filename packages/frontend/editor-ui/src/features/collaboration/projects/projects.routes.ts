@@ -15,6 +15,13 @@ const ExecutionsView = async () =>
 const ProjectVariables = async () => await import('./views/ProjectVariables.vue');
 const SettingsCommunityNodesView = async () =>
 	await import('@/features/settings/communityNodes/views/SettingsCommunityNodesView.vue');
+const SettingsMCPView = async () => await import('@/features/ai/mcpAccess/SettingsMCPView.vue');
+const SettingsMCPWorkflowsView = async () =>
+	await import('@/features/ai/mcpAccess/SettingsMCPWorkflowsView.vue');
+const SettingsMCPAgentsView = async () =>
+	await import('@/features/ai/mcpAccess/SettingsMCPAgentsView.vue');
+const SettingsMCPClientsView = async () =>
+	await import('@/features/ai/mcpAccess/SettingsMCPClientsView.vue');
 
 function refreshInsightsSummary() {
 	void import('@/features/execution/insights')
@@ -100,6 +107,34 @@ const commonChildRoutes: RouteRecordRaw[] = [
 			},
 		},
 	},
+	{
+		path: 'mcp',
+		component: SettingsMCPView,
+		meta: {
+			middleware: ['authenticated'],
+		},
+	},
+	{
+		path: 'mcp/workflows',
+		component: SettingsMCPWorkflowsView,
+		meta: {
+			middleware: ['authenticated'],
+		},
+	},
+	{
+		path: 'mcp/agents',
+		component: SettingsMCPAgentsView,
+		meta: {
+			middleware: ['authenticated'],
+		},
+	},
+	{
+		path: 'mcp/clients',
+		component: SettingsMCPClientsView,
+		meta: {
+			middleware: ['authenticated'],
+		},
+	},
 ];
 
 const commonChildRouteExtensions = {
@@ -122,6 +157,18 @@ const commonChildRouteExtensions = {
 		{
 			name: VIEWS.HOME_COMMUNITY_PACKAGES,
 		},
+		{
+			name: VIEWS.HOME_MCP,
+		},
+		{
+			name: VIEWS.HOME_MCP_WORKFLOWS,
+		},
+		{
+			name: VIEWS.HOME_MCP_AGENTS,
+		},
+		{
+			name: VIEWS.HOME_MCP_CLIENTS,
+		},
 	],
 	projects: [
 		{
@@ -141,6 +188,18 @@ const commonChildRouteExtensions = {
 		},
 		{
 			name: 'ProjectsCommunityPackages',
+		},
+		{
+			name: 'ProjectsMcp',
+		},
+		{
+			name: 'ProjectsMcpWorkflows',
+		},
+		{
+			name: 'ProjectsMcpAgents',
+		},
+		{
+			name: 'ProjectsMcpClients',
 		},
 	],
 };
@@ -164,7 +223,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 				children: commonChildRoutes
 					.map((route, idx) => ({
 						...route,
-						name: commonChildRouteExtensions.projects[idx].name,
+						name: commonChildRouteExtensions.projects[idx]?.name,
 					}))
 					.concat([
 						{
@@ -217,7 +276,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 		},
 		children: commonChildRoutes.map((route, idx) => ({
 			...route,
-			name: commonChildRouteExtensions.home[idx].name,
+			name: commonChildRouteExtensions.home[idx]?.name,
 			middleware: ['authenticated'],
 		})),
 	},
@@ -277,5 +336,21 @@ export const projectsRoutes: RouteRecordRaw[] = [
 	{
 		path: '/community-nodes',
 		redirect: '/home/community-packages',
+	},
+	{
+		path: '/mcp',
+		redirect: '/home/mcp',
+	},
+	{
+		path: '/mcp/workflows',
+		redirect: '/home/mcp/workflows',
+	},
+	{
+		path: '/mcp/agents',
+		redirect: '/home/mcp/agents',
+	},
+	{
+		path: '/mcp/clients',
+		redirect: '/home/mcp/clients',
 	},
 ];

@@ -1,7 +1,6 @@
 import { useCommunityNodesStore } from '../communityNodes.store';
 import { useCredentialsStore } from '@/features/credentials/credentials.store';
 import { useNodeTypesStore } from '@/app/stores/nodeTypes.store';
-import { useUsersStore } from '@n8n/stores/users.store';
 import { nextTick, ref } from 'vue';
 import { i18n } from '@n8n/i18n';
 import { useToast } from '@n8n/composables/useToast';
@@ -40,7 +39,6 @@ export function useInstallNode() {
 	const nodeTypesStore = useNodeTypesStore();
 	const credentialsStore = useCredentialsStore();
 	const workflowDocumentStore = injectWorkflowDocumentStore();
-	const userStore = useUsersStore();
 	const loading = ref(false);
 	const toast = useToast();
 	const canvasOperations = useCanvasOperations();

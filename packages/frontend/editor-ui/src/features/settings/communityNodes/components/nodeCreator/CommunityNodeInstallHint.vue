@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { useUsersStore } from '@n8n/stores/users.store';
-import { computed } from 'vue';
-
 import { N8nIcon, N8nText } from '@n8n/design-system';
 export interface Props {
 	hint: string;
 }
-
-const isAdminOrOwner = computed(() => useUsersStore().isAdminOrOwner);
 
 defineProps<Props>();
 </script>

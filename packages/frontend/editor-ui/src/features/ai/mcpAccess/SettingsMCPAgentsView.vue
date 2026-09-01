@@ -2,12 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from '@n8n/i18n';
-import {
-	N8nButton,
-	N8nSettingsLayout,
-	N8nSettingsPageHeader,
-	N8nTooltip,
-} from '@n8n/design-system';
+import { N8nButton, N8nTooltip } from '@n8n/design-system';
 import type { TableOptions } from '@n8n/design-system';
 
 import { useDocumentTitle } from '@/app/composables/useDocumentTitle';
@@ -16,14 +11,15 @@ import { TELEMETRY_EVENT } from '@n8n/telemetry';
 import { useToast } from '@n8n/composables/useToast';
 import { useSettingsStore } from '@n8n/stores/settings.store';
 import { useUIStore } from '@/app/stores/ui.store';
+import { VIEWS } from '@/app/constants';
 import type { Agent } from '@/features/agents/agent.types';
 import { useMCPStore } from '@/features/ai/mcpAccess/mcp.store';
 import {
 	LOADING_INDICATOR_TIMEOUT,
 	MCP_CONNECT_AGENTS_MODAL_KEY,
-	MCP_DOCS_PAGE_URL,
-	MCP_SETTINGS_VIEW,
 } from '@/features/ai/mcpAccess/mcp.constants';
+import PageViewLayout from '@/app/components/layouts/PageViewLayout.vue';
+import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 import AgentsTable from '@/features/ai/mcpAccess/components/tabs/AgentsTable.vue';
 
 const i18n = useI18n();
@@ -142,13 +138,13 @@ const openConnectAgentsModal = () => {
 };
 
 const onBack = () => {
-	void router.push({ name: MCP_SETTINGS_VIEW });
+	void router.push({ name: VIEWS.HOME_MCP });
 };
 
 onMounted(async () => {
 	documentTitle.set(i18n.baseText('settings.mcp.agentsExposed.page.title'));
 	if (!mcpStore.mcpAccessEnabled || !settingsStore.isModuleActive('agents')) {
-		await router.replace({ name: MCP_SETTINGS_VIEW });
+		await router.replace({ name: VIEWS.HOME_MCP });
 		return;
 	}
 	await fetchAvailableAgents();
@@ -156,38 +152,43 @@ onMounted(async () => {
 </script>
 
 <template>
-	<N8nSettingsLayout
-		full-width
-		show-back
-		:back-label="i18n.baseText('settings.mcp.back')"
-		:class="$style.layout"
-		@back="onBack"
-	>
-		<N8nSettingsPageHeader
-			:title="i18n.baseText('settings.mcp.agentsExposed.page.title')"
-			:description="i18n.baseText('settings.mcp.agentsExposed.page.description')"
-			:docs-url="MCP_DOCS_PAGE_URL"
-		/>
-		<div data-test-id="mcp-agents-view">
-			<div :class="$style.actions">
+	<PageViewLayout>
+		<template #header>
+			<ProjectHeader>
+				<template #actions>
+					<div :class="$style.headerActions">
+						<N8nButton
+							v-if="showConnectAgentsButton"
+							variant="solid"
+							:label="i18n.baseText('settings.mcp.connectAgents')"
+							data-test-id="mcp-connect-agents-header-button"
+							size="medium"
+							@click="openConnectAgentsModal"
+						/>
+						<N8nTooltip :content="i18n.baseText('settings.mcp.refresh.tooltip')">
+							<N8nButton
+								variant="subtle"
+								icon-only
+								data-test-id="mcp-agents-refresh-button"
+								size="medium"
+								icon="refresh-cw"
+								@click="fetchAvailableAgents"
+							/>
+						</N8nTooltip>
+					</div>
+				</template>
+			</ProjectHeader>
+		</template>
+
+		<div :class="$style.contentWrapper" data-test-id="mcp-agents-view">
+			<div :class="$style.topBar">
 				<N8nButton
-					v-if="showConnectAgentsButton"
-					variant="solid"
-					:label="i18n.baseText('settings.mcp.connectAgents')"
-					data-test-id="mcp-connect-agents-header-button"
+					variant="subtle"
+					icon="arrow-left"
 					size="small"
-					@click="openConnectAgentsModal"
+					:label="i18n.baseText('settings.mcp.back')"
+					@click="onBack"
 				/>
-				<N8nTooltip :content="i18n.baseText('settings.mcp.refresh.tooltip')">
-					<N8nButton
-						variant="subtle"
-						icon-only
-						data-test-id="mcp-agents-refresh-button"
-						size="small"
-						icon="refresh-cw"
-						@click="fetchAvailableAgents"
-					/>
-				</N8nTooltip>
 			</div>
 			<AgentsTable
 				v-model:table-options="agentsTableState"
@@ -200,28 +201,26 @@ onMounted(async () => {
 				@update:options="onAgentsTableUpdate"
 			/>
 		</div>
-	</N8nSettingsLayout>
+	</PageViewLayout>
 </template>
 
 <style lang="scss" module>
-/* Collapse the layout's own top inset; the settings shell already pads the page top. */
-.layout {
-	padding-top: 0;
-}
-
-/* Pin the back action to the top-left of the settings area (the shell's
-   content container is position: relative), independent of the centered column. */
-.layout > div:first-child {
-	position: absolute;
-	top: var(--spacing--lg);
-	left: var(--spacing--lg);
-	width: auto;
-}
-
-.actions {
+.contentWrapper {
 	display: flex;
-	justify-content: flex-end;
+	flex-direction: column;
+	gap: var(--spacing--md);
+	padding-top: var(--spacing--md);
+	width: 100%;
+}
+
+.topBar {
+	display: flex;
+	align-items: center;
+}
+
+.headerActions {
+	display: flex;
+	align-items: center;
 	gap: var(--spacing--2xs);
-	margin-bottom: var(--spacing--xs);
 }
 </style>

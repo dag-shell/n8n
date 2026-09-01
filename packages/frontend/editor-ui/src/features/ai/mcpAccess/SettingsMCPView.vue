@@ -6,11 +6,8 @@ import { ElSwitch } from 'element-plus';
 import {
 	N8nButton,
 	N8nDialog,
-	N8nDialogClose,
 	N8nDialogFooter,
 	N8nNotice,
-	N8nSettingsLayout,
-	N8nSettingsPageHeader,
 	N8nSettingsRow,
 	N8nSettingsRowConfigure,
 	N8nSettingsRowGroup,
@@ -19,6 +16,9 @@ import {
 
 import { useDocumentTitle } from '@/app/composables/useDocumentTitle';
 import { useToast } from '@n8n/composables/useToast';
+import { VIEWS } from '@/app/constants';
+import PageViewLayout from '@/app/components/layouts/PageViewLayout.vue';
+import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 import { useExposeAllWorkflowsToMcpOffer } from '@/experiments/exposeAllWorkflowsToMcp/composables/useExposeAllWorkflowsToMcpOffer';
 import { useExposeAllWorkflowsToMcpStore } from '@/experiments/exposeAllWorkflowsToMcp/stores/exposeAllWorkflowsToMcp.store';
 import MCPEmptyState from '@/features/ai/mcpAccess/components/MCPEmptyState.vue';
@@ -26,12 +26,6 @@ import McpAllowedCallbackUrlsDialog from '@/features/ai/mcpAccess/components/Mcp
 import McpConnectClientDialog from '@/features/ai/mcpAccess/components/McpConnectClientDialog.vue';
 import McpStatusControl from '@/features/ai/mcpAccess/components/McpStatusControl.vue';
 import { useMcp } from '@/features/ai/mcpAccess/composables/useMcp';
-import {
-	MCP_AGENTS_VIEW,
-	MCP_CLIENTS_VIEW,
-	MCP_DOCS_PAGE_URL,
-	MCP_WORKFLOWS_VIEW,
-} from '@/features/ai/mcpAccess/mcp.constants';
 import { useMCPStore } from '@/features/ai/mcpAccess/mcp.store';
 import { useSettingsStore } from '@n8n/stores/settings.store';
 import { hasPermission } from '@/app/utils/rbac/permissions';
@@ -55,8 +49,11 @@ const mcpStatusLoading = ref(false);
 const showDisableDialog = ref(false);
 const isLoadingClients = ref(true);
 
-const canManageMcpInstance = computed(() =>
-	hasPermission(['rbac'], { rbac: { scope: 'mcp:manage' } }),
+const canManageMcpInstance = computed(
+	() =>
+		hasPermission(['instanceOwner']) ||
+		hasPermission(['rbac'], { rbac: { scope: 'mcp:manage' } }) ||
+		!mcpStore.mcpManagedByEnv,
 );
 const canToggleMCP = computed(() => canManageMcpInstance.value && !mcpStore.mcpManagedByEnv);
 
@@ -194,15 +191,15 @@ const onConnectClient = () => {
 };
 
 const openClientsView = () => {
-	void router.push({ name: MCP_CLIENTS_VIEW });
+	void router.push({ name: VIEWS.HOME_MCP_CLIENTS });
 };
 
 const openWorkflowsView = () => {
-	void router.push({ name: MCP_WORKFLOWS_VIEW });
+	void router.push({ name: VIEWS.HOME_MCP_WORKFLOWS });
 };
 
 const openAgentsView = () => {
-	void router.push({ name: MCP_AGENTS_VIEW });
+	void router.push({ name: VIEWS.HOME_MCP_AGENTS });
 };
 
 const loadRedirectUris = async () => {
@@ -248,183 +245,188 @@ onMounted(async () => {
 </script>
 
 <template>
-	<N8nSettingsLayout :class="$style.layout">
-		<N8nSettingsPageHeader
-			:title="i18n.baseText('settings.mcp.page.title')"
-			:description="i18n.baseText('settings.mcp.page.description')"
-			:docs-url="MCP_DOCS_PAGE_URL"
-			data-test-id="mcp-settings-header"
-		/>
-
-		<MCPEmptyState
-			v-if="!mcpStore.mcpAccessEnabled"
-			:disabled="!canToggleMCP"
-			:loading="mcpStatusLoading"
-			:managed-by-env="mcpStore.mcpManagedByEnv"
-			@turn-on-mcp="onToggleMCPAccess(true)"
-		/>
-
-		<template v-else>
-			<N8nNotice
-				v-if="showInstanceCapacityNotice"
-				theme="warning"
-				data-test-id="mcp-instance-capacity-notice"
-				:content="instanceCapacityNoticeContent"
-			/>
-
-			<N8nSettingsSection
-				:title="i18n.baseText('settings.mcp.connectionDetails.title')"
-				data-test-id="mcp-enabled-section"
-			>
-				<N8nSettingsRowGroup>
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.status.title')"
-						:description="i18n.baseText('settings.mcp.status.description')"
-					>
-						<template #action>
-							<McpStatusControl
-								:disabled="!canToggleMCP"
-								:loading="mcpStatusLoading"
-								:managed-by-env="mcpStore.mcpManagedByEnv"
-								@disable="showDisableDialog = true"
-							/>
-						</template>
-					</N8nSettingsRow>
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.yourClient.title')"
-						:description="i18n.baseText('settings.mcp.yourClient.description')"
-					>
-						<template #action>
-							<N8nButton
-								variant="outline"
-								size="medium"
-								icon="mcp"
-								:label="i18n.baseText('settings.mcp.yourClient.connect')"
-								data-test-id="mcp-connect-client-button"
-								@click="onConnectClient"
-							/>
-						</template>
-					</N8nSettingsRow>
-				</N8nSettingsRowGroup>
-			</N8nSettingsSection>
-
-			<N8nSettingsSection :title="i18n.baseText('settings.mcp.access.title')">
-				<N8nSettingsRowGroup>
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.workflowsExposed.title')"
-						:description="i18n.baseText('settings.mcp.workflowsExposed.description')"
-						clickable
-						data-test-id="mcp-workflows-exposed-row"
-						@click="openWorkflowsView"
-					>
-						<template #action>
-							<N8nSettingsRowConfigure :value="workflowsExposedValue" />
-						</template>
-					</N8nSettingsRow>
-					<N8nSettingsRow
-						v-if="canManageMcpInstance && exposeAllWorkflowsToMcpStore.isEnabled"
-						:title="i18n.baseText('settings.mcp.autoExpose.title')"
-						:description="i18n.baseText('settings.mcp.autoExpose.description')"
-					>
-						<template #action>
-							<ElSwitch
-								data-test-id="mcp-auto-expose-toggle"
-								:model-value="mcpStore.autoExposeNewWorkflows"
-								:disabled="mcpStore.mcpManagedByEnv"
-								:loading="autoExposeSaving"
-								@update:model-value="onAutoExposeSwitchUpdate"
-							/>
-						</template>
-					</N8nSettingsRow>
-				</N8nSettingsRowGroup>
-				<N8nSettingsRowGroup v-if="agentsModuleActive">
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.agentsExposed.title')"
-						:description="i18n.baseText('settings.mcp.agentsExposed.description')"
-						clickable
-						data-test-id="mcp-agents-exposed-row"
-						@click="openAgentsView"
-					>
-						<template #action>
-							<N8nSettingsRowConfigure :value="agentsExposedValue" />
-						</template>
-					</N8nSettingsRow>
-				</N8nSettingsRowGroup>
-				<N8nSettingsRowGroup v-if="canManageMcpInstance">
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.callbackUrls.title')"
-						:description="i18n.baseText('settings.mcp.callbackUrls.description')"
-						clickable
-						data-test-id="mcp-callback-urls-row"
-						@click="showCallbackUrlsDialog = true"
-					>
-						<template #action>
-							<N8nSettingsRowConfigure :value="callbackUrlsValue" />
-						</template>
-					</N8nSettingsRow>
-				</N8nSettingsRowGroup>
-			</N8nSettingsSection>
-
-			<N8nSettingsSection :title="i18n.baseText('settings.mcp.connectedClients.title')">
-				<N8nSettingsRowGroup>
-					<N8nSettingsRow
-						:title="i18n.baseText('settings.mcp.connectedClients.viewAll.title')"
-						:description="
-							isLoadingClients
-								? UNKNOWN_COUNT_VALUE
-								: i18n.baseText('settings.mcp.connectedClients.viewAll.description', {
-										adjustToNumber: connectedClientsTotal,
-										interpolate: { count: String(connectedClientsTotal) },
-									})
-						"
-						clickable
-						data-test-id="mcp-clients-view-all-row"
-						@click="openClientsView"
-					>
-						<template #action>
-							<N8nSettingsRowConfigure
-								:value="i18n.baseText('settings.mcp.connectedClients.viewAll.action')"
-							/>
-						</template>
-					</N8nSettingsRow>
-				</N8nSettingsRowGroup>
-			</N8nSettingsSection>
+	<PageViewLayout>
+		<template #header>
+			<ProjectHeader />
 		</template>
 
-		<N8nDialog
-			v-model:open="showDisableDialog"
-			size="small"
-			:header="i18n.baseText('settings.mcp.status.disableDialog.title')"
-			:description="i18n.baseText('settings.mcp.status.disableDialog.description')"
-			data-test-id="mcp-disable-dialog"
-		>
-			<N8nDialogFooter>
-				<N8nDialogClose as-child>
-					<N8nButton variant="outline" :label="i18n.baseText('generic.cancel')" />
-				</N8nDialogClose>
-				<N8nButton
-					variant="destructive"
-					:label="i18n.baseText('settings.mcp.status.disableDialog.confirm')"
-					data-test-id="mcp-disable-dialog-confirm"
-					@click="onConfirmDisable"
+		<div :class="$style.contentWrapper">
+			<MCPEmptyState
+				v-if="!mcpStore.mcpAccessEnabled"
+				:disabled="!canToggleMCP"
+				:loading="mcpStatusLoading"
+				:managed-by-env="mcpStore.mcpManagedByEnv"
+				@turn-on-mcp="onToggleMCPAccess(true)"
+			/>
+
+			<template v-else>
+				<N8nNotice
+					v-if="showInstanceCapacityNotice"
+					theme="warning"
+					data-test-id="mcp-instance-capacity-notice"
+					:content="instanceCapacityNoticeContent"
 				/>
-			</N8nDialogFooter>
-		</N8nDialog>
 
-		<McpConnectClientDialog />
+				<N8nSettingsSection
+					:title="i18n.baseText('settings.mcp.connectionDetails.title')"
+					data-test-id="mcp-enabled-section"
+				>
+					<N8nSettingsRowGroup>
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.status.title')"
+							:description="i18n.baseText('settings.mcp.status.description')"
+						>
+							<template #action>
+								<McpStatusControl
+									:disabled="!canToggleMCP"
+									:loading="mcpStatusLoading"
+									:managed-by-env="mcpStore.mcpManagedByEnv"
+									@disable="showDisableDialog = true"
+								/>
+							</template>
+						</N8nSettingsRow>
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.yourClient.title')"
+							:description="i18n.baseText('settings.mcp.yourClient.description')"
+						>
+							<template #action>
+								<N8nButton
+									variant="outline"
+									size="medium"
+									icon="mcp"
+									:label="i18n.baseText('settings.mcp.yourClient.connect')"
+									data-test-id="mcp-connect-client-button"
+									@click="onConnectClient"
+								/>
+							</template>
+						</N8nSettingsRow>
+					</N8nSettingsRowGroup>
+				</N8nSettingsSection>
 
-		<McpAllowedCallbackUrlsDialog
-			v-model:open="showCallbackUrlsDialog"
-			:uris="mcpStore.allowedRedirectUris"
-			:saving="savingCallbackUrls"
-			@save="onSaveCallbackUrls"
-		/>
-	</N8nSettingsLayout>
+				<N8nSettingsSection :title="i18n.baseText('settings.mcp.access.title')">
+					<N8nSettingsRowGroup>
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.workflowsExposed.title')"
+							:description="i18n.baseText('settings.mcp.workflowsExposed.description')"
+							clickable
+							data-test-id="mcp-workflows-exposed-row"
+							@click="openWorkflowsView"
+						>
+							<template #action>
+								<N8nSettingsRowConfigure :value="workflowsExposedValue" />
+							</template>
+						</N8nSettingsRow>
+						<N8nSettingsRow
+							v-if="canManageMcpInstance && exposeAllWorkflowsToMcpStore.isEnabled"
+							:title="i18n.baseText('settings.mcp.autoExpose.title')"
+							:description="i18n.baseText('settings.mcp.autoExpose.description')"
+						>
+							<template #action>
+								<ElSwitch
+									data-test-id="mcp-auto-expose-toggle"
+									:model-value="mcpStore.autoExposeNewWorkflows"
+									:disabled="mcpStore.mcpManagedByEnv"
+									:loading="autoExposeSaving"
+									@update:model-value="onAutoExposeSwitchUpdate"
+								/>
+							</template>
+						</N8nSettingsRow>
+					</N8nSettingsRowGroup>
+					<N8nSettingsRowGroup v-if="agentsModuleActive">
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.agentsExposed.title')"
+							:description="i18n.baseText('settings.mcp.agentsExposed.description')"
+							clickable
+							data-test-id="mcp-agents-exposed-row"
+							@click="openAgentsView"
+						>
+							<template #action>
+								<N8nSettingsRowConfigure :value="agentsExposedValue" />
+							</template>
+						</N8nSettingsRow>
+					</N8nSettingsRowGroup>
+					<N8nSettingsRowGroup v-if="canManageMcpInstance">
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.callbackUrls.title')"
+							:description="i18n.baseText('settings.mcp.callbackUrls.description')"
+							clickable
+							data-test-id="mcp-callback-urls-row"
+							@click="showCallbackUrlsDialog = true"
+						>
+							<template #action>
+								<N8nSettingsRowConfigure :value="callbackUrlsValue" />
+							</template>
+						</N8nSettingsRow>
+					</N8nSettingsRowGroup>
+				</N8nSettingsSection>
+
+				<N8nSettingsSection :title="i18n.baseText('settings.mcp.connectedClients.title')">
+					<N8nSettingsRowGroup>
+						<N8nSettingsRow
+							:title="i18n.baseText('settings.mcp.connectedClients.viewAll.title')"
+							:description="
+								isLoadingClients
+									? UNKNOWN_COUNT_VALUE
+									: i18n.baseText('settings.mcp.connectedClients.viewAll.description', {
+											adjustToNumber: connectedClientsTotal,
+											interpolate: { count: String(connectedClientsTotal) },
+										})
+							"
+							clickable
+							data-test-id="mcp-clients-view-all-row"
+							@click="openClientsView"
+						>
+							<template #action>
+								<N8nSettingsRowConfigure
+									:value="i18n.baseText('settings.mcp.connectedClients.viewAll.action')"
+								/>
+							</template>
+						</N8nSettingsRow>
+					</N8nSettingsRowGroup>
+				</N8nSettingsSection>
+			</template>
+
+			<N8nDialog
+				:open="showDisableDialog"
+				size="small"
+				:header="i18n.baseText('settings.mcp.status.disableDialog.title')"
+				:description="i18n.baseText('settings.mcp.status.disableDialog.description')"
+				data-test-id="mcp-disable-dialog"
+				@update:open="showDisableDialog = $event"
+			>
+				<N8nDialogFooter>
+					<N8nButton
+						variant="outline"
+						:label="i18n.baseText('generic.cancel')"
+						@click="showDisableDialog = false"
+					/>
+					<N8nButton
+						variant="destructive"
+						:label="i18n.baseText('settings.mcp.status.disableDialog.confirm')"
+						data-test-id="mcp-disable-dialog-confirm"
+						@click="onConfirmDisable"
+					/>
+				</N8nDialogFooter>
+			</N8nDialog>
+
+			<McpConnectClientDialog />
+
+			<McpAllowedCallbackUrlsDialog
+				v-model:open="showCallbackUrlsDialog"
+				:uris="mcpStore.allowedRedirectUris"
+				:saving="savingCallbackUrls"
+				@save="onSaveCallbackUrls"
+			/>
+		</div>
+	</PageViewLayout>
 </template>
 
 <style lang="scss" module>
-/* Collapse the layout's own top inset; the settings shell already pads the page top. */
-.layout {
-	padding-top: 0;
+.contentWrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--md);
+	padding-top: var(--spacing--md);
+	width: 100%;
 }
 </style>

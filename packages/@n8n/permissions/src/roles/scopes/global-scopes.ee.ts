@@ -200,6 +200,7 @@ export const GLOBAL_MEMBER_SCOPES: Scope[] = [
 	'communityPackage:update',
 	'communityPackage:uninstall',
 	'communityPackage:manage',
+	'mcp:manage',
 	'mcp:oauth',
 	'mcpApiKey:create',
 	'mcpApiKey:rotate',

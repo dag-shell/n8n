@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useViewStacks } from '@/features/shared/nodeCreator/composables/useViewStacks';
-import { useUsersStore } from '@n8n/stores/users.store';
 import { i18n } from '@n8n/i18n';
 import { useNodeTypesStore } from '@/app/stores/nodeTypes.store';
 import { captureException } from '@sentry/vue';
-import ContactAdministratorToInstall from '../ContactAdministratorToInstall.vue';
 import { useInstalledCommunityPackage } from '../../composables/useInstalledCommunityPackage';
 
 import { N8nIcon, N8nText, N8nTooltip } from '@n8n/design-system';
@@ -35,9 +33,6 @@ const quickConnect = computed(() => {
 });
 
 const nodeTypesStore = useNodeTypesStore();
-
-const usersStore = useUsersStore();
-const isAdminOrOwner = computed(() => usersStore.isAdminOrOwner);
 
 const formatNumber = (number: number) => {
 	if (!number) return null;

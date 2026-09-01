@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, useSlots } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useElementSize, useResizeObserver } from '@vueuse/core';
 import type { TabOptions, UserAction } from '@n8n/design-system';
@@ -98,6 +98,23 @@ const headerIcon = computed((): IconOrEmoji => {
 			].includes(currentName)
 		) {
 			return { type: 'icon', value: 'box' };
+		} else if (
+			[
+				VIEWS.HOME_MCP,
+				VIEWS.HOME_MCP_WORKFLOWS,
+				VIEWS.HOME_MCP_AGENTS,
+				VIEWS.HOME_MCP_CLIENTS,
+				'McpSettings',
+				'McpSettingsWorkflows',
+				'McpSettingsAgents',
+				'McpSettingsClients',
+				'mcp',
+				'mcp-workflows',
+				'mcp-agents',
+				'mcp-clients',
+			].includes(currentName)
+		) {
+			return { type: 'icon', value: 'mcp' };
 		}
 	}
 
@@ -143,6 +160,20 @@ const projectName = computed(() => {
 			].includes(currentName)
 		) {
 			return i18n.baseText('settings.communityNodes');
+		} else if (
+			[VIEWS.HOME_MCP_WORKFLOWS, 'McpSettingsWorkflows', 'mcp-workflows'].includes(currentName)
+		) {
+			return (
+				i18n.baseText('settings.mcp.workflowsExposed.page.title') || 'Workflows exposed to MCP'
+			);
+		} else if (
+			[VIEWS.HOME_MCP_CLIENTS, 'McpSettingsClients', 'mcp-clients'].includes(currentName)
+		) {
+			return i18n.baseText('settings.mcp.connectedClients.title') || 'Connected clients';
+		} else if ([VIEWS.HOME_MCP_AGENTS, 'McpSettingsAgents', 'mcp-agents'].includes(currentName)) {
+			return i18n.baseText('settings.mcp.agentsExposed.page.title') || 'Agents exposed to MCP';
+		} else if ([VIEWS.HOME_MCP, 'McpSettings', 'mcp'].includes(currentName)) {
+			return i18n.baseText('settings.mcp');
 		}
 	}
 
@@ -490,29 +521,15 @@ const sectionDescription = computed(() => {
 	if (!hasPermission(['instanceOwner'])) {
 		const currentName = route.name as string;
 		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
-			return (
-				i18n.baseText('workflows.header.description') ||
-				'Create, manage, and monitor your automated workflows.'
-			);
+			return 'Create, manage, and monitor your automated workflows.';
 		} else if (currentName === VIEWS.CREDENTIALS) {
-			return (
-				i18n.baseText('credentials.header.description') ||
-				'Manage connected accounts and authentication credentials.'
-			);
+			return 'Manage connected accounts and authentication credentials.';
 		} else if (currentName === VIEWS.EXECUTIONS) {
-			return (
-				i18n.baseText('executions.header.description') ||
-				'View past workflow runs, statuses, and execution history.'
-			);
+			return 'View past workflow runs, statuses, and execution history.';
 		} else if ([VIEWS.HOME_VARIABLES, VIEWS.PROJECTS_VARIABLES].includes(currentName as VIEWS)) {
-			return (
-				i18n.baseText('variables.header.description') ||
-				'Manage variables and environment configuration values.'
-			);
+			return 'Manage variables and environment configuration values.';
 		} else if ([DATA_TABLE_VIEW, DATA_TABLE_DETAILS, PROJECT_DATA_TABLES].includes(currentName)) {
-			return (
-				i18n.baseText('dataTable.description') || 'Manage and store your structured data tables.'
-			);
+			return 'Manage and store your structured data tables.';
 		} else if (
 			[
 				VIEWS.COMMUNITY_NODES,
@@ -525,6 +542,30 @@ const sectionDescription = computed(() => {
 			return (
 				i18n.baseText('settings.communityNodes.empty.description.no-packages') ||
 				'Install and manage node packages contributed by our community.'
+			);
+		} else if (
+			[VIEWS.HOME_MCP_WORKFLOWS, 'McpSettingsWorkflows', 'mcp-workflows'].includes(currentName)
+		) {
+			return (
+				i18n.baseText('settings.mcp.workflowsExposed.page.description') ||
+				'Choose which workflows connected clients can access.'
+			);
+		} else if (
+			[VIEWS.HOME_MCP_CLIENTS, 'McpSettingsClients', 'mcp-clients'].includes(currentName)
+		) {
+			return (
+				i18n.baseText('settings.mcp.connectedClients.description') ||
+				'Manage AI assistants and IDEs connected to this instance.'
+			);
+		} else if ([VIEWS.HOME_MCP_AGENTS, 'McpSettingsAgents', 'mcp-agents'].includes(currentName)) {
+			return (
+				i18n.baseText('settings.mcp.agentsExposed.page.description') ||
+				'Choose which agents connected clients can access.'
+			);
+		} else if ([VIEWS.HOME_MCP, 'McpSettings', 'mcp'].includes(currentName)) {
+			return (
+				i18n.baseText('settings.mcp.page.description') ||
+				'Access your n8n instance through MCP clients.'
 			);
 		}
 	}
@@ -599,6 +640,26 @@ const onSelect = (action: string, source: CreateSource) => {
 
 	executableAction(homeProject.value.id, source);
 };
+
+const slots = useSlots();
+
+const isMcpPage = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.HOME_MCP,
+		VIEWS.HOME_MCP_WORKFLOWS,
+		VIEWS.HOME_MCP_AGENTS,
+		VIEWS.HOME_MCP_CLIENTS,
+		'McpSettings',
+		'McpSettingsWorkflows',
+		'McpSettingsAgents',
+		'McpSettingsClients',
+		'mcp',
+		'mcp-workflows',
+		'mcp-agents',
+		'mcp-clients',
+	].includes(currentName);
+});
 </script>
 
 <template>
@@ -636,40 +697,44 @@ const onSelect = (action: string, source: CreateSource) => {
 				/>
 			</div>
 			<div
-				v-if="route.name !== VIEWS.PROJECT_SETTINGS"
+				v-if="route.name !== VIEWS.PROJECT_SETTINGS && (slots.actions || !isMcpPage)"
 				ref="headerActionsRef"
 				:class="[$style.headerActions]"
 			>
-				<N8nTooltip
-					:disabled="!sourceControlStore.preferences.branchReadOnly"
-					:content="i18n.baseText('readOnlyEnv.cantAdd.any')"
-				>
-					<div style="display: flex; gap: var(--spacing--xs); align-items: center">
-						<ReadyToRunButton :has-active-callouts="props.hasActiveCallouts" />
-						<ProjectCreateResource
-							v-if="hasPermission(['instanceOwner'])"
-							data-test-id="add-resource-buttons"
-							:actions="menu"
-							:disabled="sourceControlStore.preferences.branchReadOnly"
-							@action="(action: string) => onSelect(action, 'dropdown')"
-						>
+				<slot name="actions">
+					<N8nTooltip
+						:disabled="!sourceControlStore.preferences.branchReadOnly"
+						:content="i18n.baseText('readOnlyEnv.cantAdd.any')"
+					>
+						<div style="display: flex; gap: var(--spacing--xs); align-items: center">
+							<ReadyToRunButton :has-active-callouts="props.hasActiveCallouts" />
+							<ProjectCreateResource
+								v-if="hasPermission(['instanceOwner'])"
+								data-test-id="add-resource-buttons"
+								:actions="menu"
+								:disabled="sourceControlStore.preferences.branchReadOnly"
+								@action="(action: string) => onSelect(action, 'dropdown')"
+							>
+								<N8nButton
+									:data-test-id="`add-resource-${selectedMainButtonType}`"
+									v-bind="mainButtonConfig"
+									size="medium"
+									@click="onSelect(selectedMainButtonType, 'button')"
+								/>
+							</ProjectCreateResource>
 							<N8nButton
+								v-else
 								:data-test-id="`add-resource-${selectedMainButtonType}`"
 								v-bind="mainButtonConfig"
 								size="medium"
+								:disabled="
+									mainButtonConfig.disabled || sourceControlStore.preferences.branchReadOnly
+								"
 								@click="onSelect(selectedMainButtonType, 'button')"
 							/>
-						</ProjectCreateResource>
-						<N8nButton
-							v-else
-							:data-test-id="`add-resource-${selectedMainButtonType}`"
-							v-bind="mainButtonConfig"
-							size="medium"
-							:disabled="mainButtonConfig.disabled || sourceControlStore.preferences.branchReadOnly"
-							@click="onSelect(selectedMainButtonType, 'button')"
-						/>
-					</div>
-				</N8nTooltip>
+						</div>
+					</N8nTooltip>
+				</slot>
 			</div>
 		</div>
 		<slot></slot>
