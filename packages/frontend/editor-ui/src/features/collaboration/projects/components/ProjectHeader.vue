@@ -313,7 +313,13 @@ const selectedMainButtonType = computed(() => {
 	if (props.mainButton === ACTION_TYPES.AGENT && !settingsStore.isModuleActive('agents')) {
 		return ACTION_TYPES.WORKFLOW;
 	}
-	return props.mainButton ?? ACTION_TYPES.WORKFLOW;
+	if (props.mainButton) {
+		return props.mainButton;
+	}
+	if (isCommunityNodesPage.value) {
+		return ACTION_TYPES.COMMUNITY_PACKAGE;
+	}
+	return ACTION_TYPES.WORKFLOW;
 });
 
 const mainButtonConfig = computed(() => {
@@ -660,6 +666,27 @@ const isMcpPage = computed(() => {
 		'mcp-clients',
 	].includes(currentName);
 });
+
+const isExecutionsPage = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.EXECUTIONS,
+		VIEWS.EXECUTION_HOME,
+		VIEWS.EXECUTION_PREVIEW,
+		VIEWS.EXECUTION_DEBUG,
+		'executions',
+	].includes(currentName as VIEWS);
+});
+
+const isCommunityNodesPage = computed(() => {
+	const currentName = route.name as string;
+	return [
+		VIEWS.COMMUNITY_NODES,
+		VIEWS.HOME_COMMUNITY_PACKAGES,
+		'settings-community-nodes',
+		'community-packages',
+	].includes(currentName as VIEWS);
+});
 </script>
 
 <template>
@@ -697,7 +724,10 @@ const isMcpPage = computed(() => {
 				/>
 			</div>
 			<div
-				v-if="route.name !== VIEWS.PROJECT_SETTINGS && (slots.actions || !isMcpPage)"
+				v-if="
+					route.name !== VIEWS.PROJECT_SETTINGS &&
+					(slots.actions || (!isMcpPage && !isExecutionsPage))
+				"
 				ref="headerActionsRef"
 				:class="[$style.headerActions]"
 			>

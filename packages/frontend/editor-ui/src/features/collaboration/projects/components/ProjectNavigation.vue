@@ -327,15 +327,24 @@ onBeforeUnmount(() => {
 				/>
 			</template>
 
-			<!-- Non-Owner Direct Resource Navigation (Grouped) -->
+			<!-- Non-Owner Direct Resource Navigation (Grouped with Subtitles) -->
 			<template v-else>
-				<!-- Group 1: Workflows & Executions -->
+				<!-- Group 1: Automation (Workflows, Data tables, Executions) -->
 				<div :class="$style.navGroup">
+					<div v-if="!props.collapsed" :class="$style.groupSubtitle">
+						{{ locale.baseText('mainSidebar.group.automation') }}
+					</div>
 					<N8nMenuItem
 						:item="workflowsItem"
 						:compact="props.collapsed"
 						:active="isWorkflowsActive"
 						data-test-id="project-workflows-menu-item"
+					/>
+					<N8nMenuItem
+						:item="dataTablesItem"
+						:compact="props.collapsed"
+						:active="isDataTablesActive"
+						data-test-id="project-datatables-menu-item"
 					/>
 					<N8nMenuItem
 						:item="executionsItem"
@@ -347,20 +356,11 @@ onBeforeUnmount(() => {
 
 				<div :class="$style.groupDivider" />
 
-				<!-- Group 2: Data tables -->
+				<!-- Group 2: Configuration (Credentials, Variables) -->
 				<div :class="$style.navGroup">
-					<N8nMenuItem
-						:item="dataTablesItem"
-						:compact="props.collapsed"
-						:active="isDataTablesActive"
-						data-test-id="project-datatables-menu-item"
-					/>
-				</div>
-
-				<div :class="$style.groupDivider" />
-
-				<!-- Group 3: Credentials, Variables & MCP -->
-				<div :class="$style.navGroup">
+					<div v-if="!props.collapsed" :class="$style.groupSubtitle">
+						{{ locale.baseText('mainSidebar.group.configuration') }}
+					</div>
 					<N8nMenuItem
 						:item="credentialsItem"
 						:compact="props.collapsed"
@@ -373,18 +373,21 @@ onBeforeUnmount(() => {
 						:active="isVariablesActive"
 						data-test-id="project-variables-menu-item"
 					/>
+				</div>
+
+				<div :class="$style.groupDivider" />
+
+				<!-- Group 3: Integrations (MCP Config, Packages) -->
+				<div :class="$style.navGroup">
+					<div v-if="!props.collapsed" :class="$style.groupSubtitle">
+						{{ locale.baseText('mainSidebar.group.integrations') }}
+					</div>
 					<N8nMenuItem
 						:item="mcpItem"
 						:compact="props.collapsed"
 						:active="isMcpActive"
 						data-test-id="project-mcp-menu-item"
 					/>
-				</div>
-
-				<div :class="$style.groupDivider" />
-
-				<!-- Group 4: Community Packages -->
-				<div :class="$style.navGroup">
 					<N8nMenuItem
 						:item="communityPackagesItem"
 						:compact="props.collapsed"
@@ -649,10 +652,22 @@ onBeforeUnmount(() => {
 	gap: var(--spacing--5xs);
 }
 
+.groupSubtitle {
+	display: flex;
+	align-items: center;
+	padding: var(--spacing--2xs) var(--spacing--xs) var(--spacing--5xs);
+	font-size: 10px;
+	font-weight: var(--font-weight--bold, 600);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color--text--tint-1);
+	user-select: none;
+}
+
 .groupDivider {
 	display: block;
 	width: 100%;
 	border-bottom: var(--border);
-	margin: var(--spacing--xs) 0;
+	margin: var(--spacing--xs) 0 var(--spacing--2xs);
 }
 </style>

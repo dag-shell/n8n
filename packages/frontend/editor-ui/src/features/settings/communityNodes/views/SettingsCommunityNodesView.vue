@@ -172,13 +172,7 @@ const filteredInstalledPackages = computed(() => {
 <template>
 	<PageViewLayout>
 		<template #header>
-			<ProjectHeader
-				:main-button="
-					canInstall && communityNodesStore.getInstalledPackages.length > 0 && !loading
-						? 'communityPackage'
-						: undefined
-				"
-			/>
+			<ProjectHeader main-button="communityPackage" />
 		</template>
 
 		<div :class="$style.contentWrapper">
@@ -193,7 +187,7 @@ const filteredInstalledPackages = computed(() => {
 			<div v-if="communityNodesStore.getInstalledPackages.length > 0" :class="$style.filtersRow">
 				<N8nInput
 					v-model="searchQuery"
-					placeholder="Search community packages..."
+					placeholder="Search packages..."
 					size="medium"
 					clearable
 					:class="$style.search"
