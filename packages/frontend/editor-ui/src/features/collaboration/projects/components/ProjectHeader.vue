@@ -78,7 +78,9 @@ const emit = defineEmits<{
 const headerIcon = computed((): IconOrEmoji => {
 	if (!hasPermission(['instanceOwner'])) {
 		const currentName = route.name as string;
-		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+		if ([VIEWS.HOME_OVERVIEW, 'HomeOverview', 'ProjectsOverview'].includes(currentName)) {
+			return { type: 'icon', value: 'house' };
+		} else if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
 			return { type: 'icon', value: 'git-branch' };
 		} else if (currentName === VIEWS.CREDENTIALS) {
 			return { type: 'icon', value: 'key' };
@@ -140,7 +142,9 @@ const isPersonalProject = computed(() => {
 const projectName = computed(() => {
 	if (!hasPermission(['instanceOwner'])) {
 		const currentName = route.name as string;
-		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+		if ([VIEWS.HOME_OVERVIEW, 'HomeOverview', 'ProjectsOverview'].includes(currentName)) {
+			return i18n.baseText('projects.menu.overview');
+		} else if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
 			return i18n.baseText('mainSidebar.workflows');
 		} else if (currentName === VIEWS.CREDENTIALS) {
 			return i18n.baseText('mainSidebar.credentials');
@@ -526,7 +530,9 @@ const pageType = computed(() => {
 const sectionDescription = computed(() => {
 	if (!hasPermission(['instanceOwner'])) {
 		const currentName = route.name as string;
-		if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
+		if ([VIEWS.HOME_OVERVIEW, 'HomeOverview', 'ProjectsOverview'].includes(currentName)) {
+			return 'Monitor your workspace activity, execution metrics, and automations at a glance.';
+		} else if ([VIEWS.WORKFLOWS, VIEWS.FOLDERS].includes(currentName as VIEWS)) {
 			return 'Create, manage, and monitor your automated workflows.';
 		} else if (currentName === VIEWS.CREDENTIALS) {
 			return 'Manage connected accounts and authentication credentials.';
@@ -687,6 +693,17 @@ const isCommunityNodesPage = computed(() => {
 		'community-packages',
 	].includes(currentName as VIEWS);
 });
+
+const isOverviewPage = computed(() => {
+	const currentName = route.name as string;
+	return (
+		[VIEWS.HOME_OVERVIEW, VIEWS.HOMEPAGE, 'HomeOverview', 'ProjectsOverview'].includes(
+			currentName as VIEWS,
+		) ||
+		route.path === '/home/overview' ||
+		route.path === '/overview'
+	);
+});
 </script>
 
 <template>
@@ -726,7 +743,7 @@ const isCommunityNodesPage = computed(() => {
 			<div
 				v-if="
 					route.name !== VIEWS.PROJECT_SETTINGS &&
-					(slots.actions || (!isMcpPage && !isExecutionsPage))
+					(slots.actions || (!isMcpPage && !isExecutionsPage && !isOverviewPage))
 				"
 				ref="headerActionsRef"
 				:class="[$style.headerActions]"

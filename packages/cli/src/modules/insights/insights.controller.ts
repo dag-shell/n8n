@@ -5,7 +5,7 @@ import type {
 	RestrictedInsightsByTime,
 } from '@n8n/api-types';
 import { InsightsDateFilterDto, ListInsightsWorkflowQueryDto } from '@n8n/api-types';
-import { AuthenticatedRequest } from '@n8n/db';
+import { AuthenticatedRequest, GLOBAL_OWNER_ROLE, ProjectRepository } from '@n8n/db';
 import { Get, GlobalScope, Licensed, Query, RestController } from '@n8n/decorators';
 import { DateTime } from 'luxon';
 import { UserError } from 'n8n-workflow';
@@ -19,7 +19,23 @@ import { InsightsService } from './insights.service';
 
 @RestController('/insights')
 export class InsightsController {
-	constructor(private readonly insightsService: InsightsService) {}
+	constructor(
+		private readonly insightsService: InsightsService,
+		private readonly projectRepository: ProjectRepository,
+	) {}
+
+	private async resolveTargetProjectId(
+		req: AuthenticatedRequest,
+		queryProjectId?: string,
+	): Promise<string | undefined> {
+		if (req.user.role !== GLOBAL_OWNER_ROLE) {
+			const personalProject = await this.projectRepository.getPersonalProjectForUserOrFail(
+				req.user.id,
+			);
+			return personalProject.id;
+		}
+		return queryProjectId;
+	}
 
 	@Get('/summary')
 	@GlobalScope('insights:list')
@@ -35,7 +51,7 @@ export class InsightsController {
 			startDate,
 			endDate,
 			timeZone,
-			projectId: query.projectId,
+			projectId: await this.resolveTargetProjectId(req, query.projectId),
 		});
 	}
 
@@ -54,7 +70,7 @@ export class InsightsController {
 			skip: query.skip,
 			take: query.take,
 			sortBy: query.sortBy,
-			projectId: query.projectId,
+			projectId: await this.resolveTargetProjectId(req, query.projectId),
 			startDate,
 			endDate,
 			timeZone,
@@ -75,7 +91,7 @@ export class InsightsController {
 		// as the service returns all types by default
 		return (await this.insightsService.getInsightsByTime({
 			user: req.user,
-			projectId: query.projectId,
+			projectId: await this.resolveTargetProjectId(req, query.projectId),
 			startDate,
 			endDate,
 			timeZone,
@@ -100,7 +116,7 @@ export class InsightsController {
 		return (await this.insightsService.getInsightsByTime({
 			user: req.user,
 			insightTypes: ['time_saved_min'],
-			projectId: query.projectId,
+			projectId: await this.resolveTargetProjectId(req, query.projectId),
 			startDate,
 			endDate,
 			timeZone,

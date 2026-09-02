@@ -10,8 +10,6 @@ import { useProjectsStore } from '@/features/collaboration/projects/projects.sto
 import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 import ResourcesListLayout from '@/app/components/layouts/ResourcesListLayout.vue';
 import ResourcesListEmptyState from '@/app/components/layouts/ResourcesListEmptyState.vue';
-import { InsightsSummary, useInsightsStore } from '@/features/execution/insights';
-import { useProjectPages } from '@/features/collaboration/projects/composables/useProjectPages';
 import { useDocumentTitle } from '@/app/composables/useDocumentTitle';
 import {
 	listAgentsPage,
@@ -45,8 +43,6 @@ const route = useRoute();
 const router = useRouter();
 const rootStore = useRootStore();
 const projectsStore = useProjectsStore();
-const insightsStore = useInsightsStore();
-const projectPages = useProjectPages();
 const agentTelemetry = useAgentTelemetry();
 const { callDebounced } = useDebounce();
 
@@ -207,14 +203,7 @@ onMounted(async () => {
 		@update:pagination-and-sort="setPaginationAndSort"
 	>
 		<template #header>
-			<ProjectHeader main-button="agent">
-				<InsightsSummary
-					v-if="projectPages.isOverviewSubPage && insightsStore.isSummaryEnabled"
-					:loading="insightsStore.weeklySummary.isLoading"
-					:summary="insightsStore.weeklySummary.state"
-					time-range="week"
-				/>
-			</ProjectHeader>
+			<ProjectHeader main-button="agent" />
 		</template>
 
 		<template #empty>

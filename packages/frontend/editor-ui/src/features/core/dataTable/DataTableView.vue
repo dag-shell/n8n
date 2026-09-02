@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
 import { useProjectPages } from '@/features/collaboration/projects/composables/useProjectPages';
-import { InsightsSummary, useInsightsStore } from '@/features/execution/insights';
 
 import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
 import DataTableCard from '@/features/core/dataTable/components/DataTableCard.vue';
@@ -38,7 +37,6 @@ const documentTitle = useDocumentTitle();
 const toast = useToast();
 
 const dataTableStore = useDataTableStore();
-const insightsStore = useInsightsStore();
 const projectsStore = useProjectsStore();
 const sourceControlStore = useSourceControlStore();
 const uiStore = useUIStore();
@@ -213,14 +211,7 @@ watch(
 		@update:pagination-and-sort="onPaginationUpdate"
 	>
 		<template #header>
-			<ProjectHeader main-button="dataTable">
-				<InsightsSummary
-					v-if="projectPages.isOverviewSubPage && insightsStore.isSummaryEnabled"
-					:loading="insightsStore.weeklySummary.isLoading"
-					:summary="insightsStore.weeklySummary.state"
-					time-range="week"
-				/>
-			</ProjectHeader>
+			<ProjectHeader main-button="dataTable" />
 		</template>
 		<template #empty>
 			<ResourcesListEmptyState

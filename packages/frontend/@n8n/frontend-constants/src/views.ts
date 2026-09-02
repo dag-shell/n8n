@@ -80,6 +80,7 @@ export enum VIEWS {
 	INSTANCE_ROLE_VIEW = 'InstanceRoleViewView',
 	PROJECTS_VARIABLES = 'ProjectsVariables',
 	HOME_VARIABLES = 'HomeVariables',
+	HOME_OVERVIEW = 'HomeOverview',
 	HOME_COMMUNITY_PACKAGES = 'HomeCommunityPackages',
 	HOME_MCP = 'HomeMcp',
 	HOME_MCP_WORKFLOWS = 'HomeMcpWorkflows',

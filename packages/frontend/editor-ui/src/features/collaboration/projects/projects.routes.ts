@@ -22,6 +22,7 @@ const SettingsMCPAgentsView = async () =>
 	await import('@/features/ai/mcpAccess/SettingsMCPAgentsView.vue');
 const SettingsMCPClientsView = async () =>
 	await import('@/features/ai/mcpAccess/SettingsMCPClientsView.vue');
+const HomeOverviewView = async () => await import('./views/HomeOverviewView.vue');
 
 function refreshInsightsSummary() {
 	void import('@/features/execution/insights')
@@ -43,6 +44,16 @@ const checkProjectAvailability = (to?: RouteLocationNormalized): boolean => {
 };
 
 const commonChildRoutes: RouteRecordRaw[] = [
+	{
+		path: 'overview',
+		component: HomeOverviewView,
+		meta: {
+			middleware: ['authenticated', 'custom'],
+			middlewareOptions: {
+				custom: (options) => checkProjectAvailability(options?.to),
+			},
+		},
+	},
 	{
 		path: 'workflows',
 		component: WorkflowsView,
@@ -140,6 +151,9 @@ const commonChildRoutes: RouteRecordRaw[] = [
 const commonChildRouteExtensions = {
 	home: [
 		{
+			name: VIEWS.HOME_OVERVIEW,
+		},
+		{
 			name: VIEWS.WORKFLOWS,
 		},
 		{
@@ -171,6 +185,9 @@ const commonChildRouteExtensions = {
 		},
 	],
 	projects: [
+		{
+			name: 'ProjectsOverview',
+		},
 		{
 			name: VIEWS.PROJECTS_WORKFLOWS,
 		},
@@ -211,7 +228,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 		meta: {
 			middleware: ['authenticated', 'instanceOwner'],
 		},
-		redirect: '/home/workflows',
+		redirect: '/home/overview',
 		children: [
 			{
 				name: VIEWS.PROJECT_DETAILS,
@@ -259,7 +276,7 @@ export const projectsRoutes: RouteRecordRaw[] = [
 		meta: {
 			middleware: ['authenticated'],
 		},
-		redirect: '/home/workflows',
+		redirect: '/home/overview',
 		beforeEnter: (_to, _from, next) => {
 			const settingsStore = useSettingsStore();
 			if (settingsStore.isChatFeatureEnabled && hasRole(['global:chatUser'])) {
@@ -312,6 +329,10 @@ export const projectsRoutes: RouteRecordRaw[] = [
 				},
 			},
 		],
+	},
+	{
+		path: '/overview',
+		redirect: '/home/overview',
 	},
 	{
 		path: '/workflows',

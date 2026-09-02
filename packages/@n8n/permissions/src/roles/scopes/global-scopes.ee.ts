@@ -211,6 +211,8 @@ export const GLOBAL_MEMBER_SCOPES: Scope[] = [
 	'chatHubAgent:delete',
 	'chatHubAgent:list',
 	'instanceAi:message',
+	'insights:list',
+	'insights:read',
 ];
 
 export const GLOBAL_CHAT_USER_SCOPES: Scope[] = [

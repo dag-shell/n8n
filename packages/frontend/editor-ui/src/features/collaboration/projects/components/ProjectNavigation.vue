@@ -80,9 +80,45 @@ const home = computed<IMenuItem>(() => ({
 	label: locale.baseText('projects.menu.overview'),
 	icon: 'house',
 	route: {
-		to: { name: VIEWS.HOMEPAGE },
+		to: { name: VIEWS.HOME_OVERVIEW },
 	},
 }));
+
+const isOverviewActive = computed(() => {
+	const currentName = route.name as string;
+	return (
+		[VIEWS.HOME_OVERVIEW, VIEWS.HOMEPAGE, 'HomeOverview', 'ProjectsOverview'].includes(
+			currentName as VIEWS,
+		) ||
+		route.path === '/home/overview' ||
+		route.path === '/home' ||
+		route.path === '/overview'
+	);
+});
+
+const isAnalyticsAvailable = computed(
+	() =>
+		settingsStore.isModuleActive('insights') &&
+		hasPermission(['rbac'], { rbac: { scope: 'insights:list' } }),
+);
+
+const analyticsItem = computed<IMenuItem>(() => ({
+	id: 'analytics',
+	label: locale.baseText('mainSidebar.analytics') || 'Analytics',
+	icon: 'chart-column-decreasing',
+	route: {
+		to: { name: VIEWS.INSIGHTS },
+	},
+}));
+
+const isAnalyticsActive = computed(() => {
+	const currentName = route.name as string;
+	return (
+		currentName === VIEWS.INSIGHTS ||
+		route.path.startsWith('/insights') ||
+		activeTabId.value === 'analytics'
+	);
+});
 
 const workflowsItem = computed<IMenuItem>(() => ({
 	id: 'workflows',
@@ -149,13 +185,9 @@ const mcpItem = computed<IMenuItem>(() => ({
 
 const isWorkflowsActive = computed(() => {
 	const currentName = route.name as string;
-	return [
-		VIEWS.WORKFLOWS,
-		VIEWS.WORKFLOW,
-		VIEWS.NEW_WORKFLOW,
-		VIEWS.FOLDERS,
-		VIEWS.HOMEPAGE,
-	].includes(currentName as VIEWS);
+	return [VIEWS.WORKFLOWS, VIEWS.WORKFLOW, VIEWS.NEW_WORKFLOW, VIEWS.FOLDERS].includes(
+		currentName as VIEWS,
+	);
 });
 
 const isCredentialsActive = computed(() => {
@@ -306,6 +338,13 @@ onBeforeUnmount(() => {
 					data-test-id="project-home-menu-item"
 				/>
 				<N8nMenuItem
+					v-if="isAnalyticsAvailable"
+					:item="analyticsItem"
+					:compact="props.collapsed"
+					:active="isAnalyticsActive"
+					data-test-id="project-analytics-menu-item"
+				/>
+				<N8nMenuItem
 					v-if="
 						(projectsStore.isTeamProjectFeatureEnabled || isFoldersFeatureEnabled) &&
 						hasPermission(['instanceOwner'])
@@ -329,6 +368,22 @@ onBeforeUnmount(() => {
 
 			<!-- Non-Owner Direct Resource Navigation (Grouped with Subtitles) -->
 			<template v-else>
+				<N8nMenuItem
+					:item="home"
+					:compact="props.collapsed"
+					:active="isOverviewActive"
+					data-test-id="project-overview-menu-item"
+				/>
+				<N8nMenuItem
+					v-if="isAnalyticsAvailable"
+					:item="analyticsItem"
+					:compact="props.collapsed"
+					:active="isAnalyticsActive"
+					data-test-id="project-analytics-menu-item"
+				/>
+
+				<div :class="$style.groupDivider" />
+
 				<!-- Group 1: Automation (Workflows, Data tables, Executions) -->
 				<div :class="$style.navGroup">
 					<div v-if="!props.collapsed" :class="$style.groupSubtitle">

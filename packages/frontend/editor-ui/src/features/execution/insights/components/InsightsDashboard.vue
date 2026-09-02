@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { useDocumentTitle } from '@/app/composables/useDocumentTitle';
-import ProjectSharing from '@/features/collaboration/projects/components/ProjectSharing.vue';
-import type { ProjectSharingData } from '@/features/collaboration/projects/projects.types';
-import type { ProjectListItem } from '@/features/collaboration/projects/projects.types';
 import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
-import { useAvailableProjectSearch } from '@/features/collaboration/projects/projects.utils';
 import InsightsSummary from '@/features/execution/insights/components/InsightsSummary.vue';
 import { useInsightsStore } from '@/features/execution/insights/insights.store';
 import type { DateValue } from '@internationalized/date';
@@ -95,7 +91,9 @@ const granularity = computed(() => {
 	if (comparison <= 30) return 'day';
 	return 'week';
 });
-const selectedProject = ref<ProjectSharingData | null>(null);
+const userProjectId = computed(
+	() => projectsStore.personalProject?.id ?? projectsStore.currentProject?.id,
+);
 
 const maxDate = today(getLocalTimeZone());
 
@@ -147,7 +145,7 @@ const fetchPaginatedTableData = ({
 	page = 0,
 	itemsPerPage = 25,
 	sortBy,
-	projectId = selectedProject.value?.id,
+	projectId = userProjectId.value,
 }: {
 	page?: number;
 	itemsPerPage?: number;
@@ -160,27 +158,38 @@ const fetchPaginatedTableData = ({
 	const sortKey = sortBy.length ? transformFilter(sortBy[0]) : undefined;
 
 	const { startDate, endDate } = getFilteredRange();
+	const targetProjectId = projectId ?? userProjectId.value;
+	if (!targetProjectId) return;
+
 	void insightsStore.table.execute(0, {
 		skip,
 		take,
 		sortBy: sortKey,
 		startDate,
 		endDate,
-		projectId,
+		projectId: targetProjectId,
 	});
 };
 
 let latestFetchId = 0;
 
 watch(
-	() => [props.insightType, selectedProject.value, range.value],
+	() => [props.insightType, userProjectId.value, range.value],
 	async () => {
 		const fetchId = ++latestFetchId;
 
 		sortTableBy.value = [{ id: props.insightType, desc: true }];
 
 		const { startDate, endDate } = getFilteredRange();
-		const projectId = selectedProject.value?.id;
+		let projectId = userProjectId.value;
+		if (!projectId) {
+			await projectsStore.getPersonalProject();
+			projectId = userProjectId.value;
+		}
+
+		if (!projectId) {
+			return;
+		}
 
 		if (insightsStore.isSummaryEnabled) {
 			void insightsStore.summary.execute(0, { startDate, endDate, projectId });
@@ -203,13 +212,11 @@ watch(
 		}
 
 		// Callers may receive HTTP 403 if they have no `workflow:read` permission for a project.
-		// Revert to "All projects" instead of leaving the dashboard stuck on an all-zero, misleading state.
 		const chartsError = insightsStore.charts.error;
 		if (projectId && chartsError instanceof ResponseError && chartsError.httpStatusCode === 403) {
 			toast.showError(chartsError, i18n.baseText('insights.dashboard.error.forbidden.title'), {
 				message: i18n.baseText('insights.dashboard.error.forbidden.message'),
 			});
-			selectedProject.value = null;
 		}
 	},
 	{
@@ -220,18 +227,10 @@ watch(
 onMounted(() => {
 	useDocumentTitle().set(i18n.baseText('insights.heading'));
 });
-// Must be *only* <email> — no extra text before or after
-const emailPattern = /^<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>$/;
-
-const searchFn = useAvailableProjectSearch();
-const filterFn = (project: ProjectListItem) =>
-	!!project.name && !emailPattern.test(project.name.trim());
 
 onBeforeMount(async () => {
-	// Members filter locally over myProjects — preload them.
-	// Admins use remote search, so skip the unpaginated GET /projects call.
-	if (!projectsStore.globalProjectPermissions.list) {
-		await projectsStore.getAvailableProjects();
+	if (!projectsStore.personalProject) {
+		await projectsStore.getPersonalProject();
 	}
 });
 </script>
@@ -239,22 +238,10 @@ onBeforeMount(async () => {
 <template>
 	<div :class="$style.insightsView">
 		<div :class="$style.insightsContainer">
-			<N8nHeading bold tag="h2" size="xlarge">
-				{{ i18n.baseText('insights.dashboard.title') }}
-			</N8nHeading>
-
-			<div class="mt-s" style="display: flex; gap: 12px; align-items: center">
-				<ProjectSharing
-					v-model="selectedProject"
-					:search-fn="searchFn"
-					:filter-fn="filterFn"
-					:placeholder="i18n.baseText('insights.dashboard.search.placeholder')"
-					:empty-options-text="i18n.baseText('projects.sharing.noMatchingProjects')"
-					size="mini"
-					:class="$style.projectSelect"
-					clearable
-					@clear="selectedProject = null"
-				/>
+			<div :class="$style.headerRow">
+				<N8nHeading bold tag="h2" size="xlarge">
+					{{ i18n.baseText('insights.dashboard.title') }}
+				</N8nHeading>
 
 				<InsightsDataRangePicker
 					v-model="range"
@@ -342,6 +329,14 @@ onBeforeMount(async () => {
 	margin: 0 auto;
 }
 
+.headerRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--spacing--md);
+	flex-wrap: wrap;
+}
+
 .insightsBanner {
 	margin-bottom: 0;
 
@@ -413,13 +408,6 @@ onBeforeMount(async () => {
 		background-color: var(--color--background--light-3);
 		opacity: 0.75;
 		z-index: 1;
-	}
-}
-
-.projectSelect {
-	min-width: 200px;
-	:global(.el-input--suffix .el-input__inner) {
-		padding-right: 26px;
 	}
 }
 

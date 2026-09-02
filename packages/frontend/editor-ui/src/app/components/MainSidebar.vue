@@ -137,16 +137,6 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		},
 	},
 	{
-		id: 'insights',
-		icon: 'chart-column-decreasing',
-		label: 'Insights',
-		position: 'bottom',
-		route: { to: { name: VIEWS.INSIGHTS } },
-		available:
-			settingsStore.isModuleActive('insights') &&
-			hasPermission(['rbac'], { rbac: { scope: 'insights:list' } }),
-	},
-	{
 		id: 'help',
 		icon: 'circle-help',
 		label: i18n.baseText('mainSidebar.help'),

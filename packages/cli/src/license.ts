@@ -281,7 +281,10 @@ export class License implements LicenseProvider {
 		if (
 			feature === LICENSE_FEATURES.VARIABLES ||
 			feature === LICENSE_FEATURES.WORKFLOW_DIFFS ||
-			feature === LICENSE_FEATURES.NAMED_VERSIONS
+			feature === LICENSE_FEATURES.NAMED_VERSIONS ||
+			feature === LICENSE_FEATURES.INSIGHTS_VIEW_SUMMARY ||
+			feature === LICENSE_FEATURES.INSIGHTS_VIEW_DASHBOARD ||
+			feature === LICENSE_FEATURES.INSIGHTS_VIEW_HOURLY_DATA
 		) {
 			return true;
 		}
@@ -422,6 +425,12 @@ export class License implements LicenseProvider {
 		if (
 			feature === 'quota:workflowHistoryPrune' ||
 			feature === LICENSE_QUOTAS.WORKFLOW_HISTORY_PRUNE_LIMIT
+		) {
+			return UNLIMITED_LICENSE_QUOTA as FeatureReturnType[T];
+		}
+		if (
+			feature === 'quota:insights:maxHistoryDays' ||
+			feature === LICENSE_QUOTAS.INSIGHTS_MAX_HISTORY_DAYS
 		) {
 			return UNLIMITED_LICENSE_QUOTA as FeatureReturnType[T];
 		}

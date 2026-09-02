@@ -192,7 +192,7 @@ export const routes: RouteRecordRaw[] = [
 			) {
 				return next({ name: INSTANCE_AI_VIEW });
 			}
-			next('/home/workflows');
+			next('/home/overview');
 		},
 		meta: {
 			middleware: ['authenticated'],
