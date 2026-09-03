@@ -12,7 +12,11 @@ import { useRoute } from 'vue-router';
 import { useProjectsStore } from '../projects.store';
 import { DEFAULT_PROJECT_ICON } from '../projects.constants';
 import type { ProjectListItem } from '../projects.types';
-import { CHAT_VIEW } from '@/features/ai/chatHub/constants';
+import {
+	CHAT_VIEW,
+	CHAT_WORKFLOW_AGENTS_VIEW,
+	CHAT_PERSONAL_AGENTS_VIEW,
+} from '@/features/ai/chatHub/constants';
 import { DATA_TABLE_VIEW } from '@/features/core/dataTable/constants';
 import { useFavoritesStore } from '@/app/stores/favorites.store';
 import { useFavoriteNavItems } from '../composables/useFavoriteNavItems';
@@ -243,6 +247,22 @@ const isMcpActive = computed(() => {
 	].includes(currentName);
 });
 
+const isChatActive = computed(() => {
+	const currentName = route.name as string;
+	return (
+		[
+			CHAT_VIEW,
+			CHAT_WORKFLOW_AGENTS_VIEW,
+			CHAT_PERSONAL_AGENTS_VIEW,
+			'chat',
+			'ChatView',
+			'chat-view',
+		].includes(currentName) ||
+		route.path.startsWith('/chat') ||
+		activeTabId.value === 'chat'
+	);
+});
+
 const shared = computed<IMenuItem>(() => ({
 	id: 'shared',
 	label: locale.baseText('projects.menu.shared'),
@@ -297,11 +317,9 @@ const workflowReviews = computed<IMenuItem>(() => ({
 }));
 const chat = computed<IMenuItem>(() => ({
 	id: 'chat',
-	icon: 'message-circle',
-	label: locale.baseText('projects.menu.chat'),
-	position: 'bottom',
+	icon: 'robot',
+	label: 'Agent',
 	route: { to: { name: CHAT_VIEW } },
-	preview: true,
 }));
 
 async function onSourceControlPull() {
@@ -353,6 +371,13 @@ onBeforeUnmount(() => {
 					:compact="props.collapsed"
 					:active="activeTabId === personalProject.id"
 					data-test-id="project-personal-menu-item"
+				/>
+				<N8nMenuItem
+					v-if="isChatLinkAvailable"
+					:item="chat"
+					:compact="props.collapsed"
+					:active="isChatActive"
+					data-test-id="project-chat-menu-item-owner"
 				/>
 				<N8nMenuItem
 					v-if="
@@ -407,6 +432,13 @@ onBeforeUnmount(() => {
 						:active="isExecutionsActive"
 						data-test-id="project-executions-menu-item"
 					/>
+					<N8nMenuItem
+						v-if="isChatLinkAvailable"
+						:item="chat"
+						:compact="props.collapsed"
+						:active="isChatActive"
+						data-test-id="project-chat-menu-item"
+					/>
 				</div>
 
 				<div :class="$style.groupDivider" />
@@ -458,13 +490,6 @@ onBeforeUnmount(() => {
 				:compact="props.collapsed"
 				:active="activeTabId === 'workflow-reviews'"
 				data-test-id="project-workflow-reviews-menu-item"
-			/>
-			<N8nMenuItem
-				v-if="isChatLinkAvailable"
-				:item="chat"
-				:compact="props.collapsed"
-				:active="activeTabId === 'chat'"
-				data-test-id="project-chat-menu-item"
 			/>
 		</div>
 		<template v-if="hasFavorites && isOwner">
