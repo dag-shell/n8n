@@ -287,10 +287,7 @@ export class License implements LicenseProvider {
 			feature === LICENSE_FEATURES.DEBUG_IN_EDITOR ||
 			feature === LICENSE_FEATURES.ADVANCED_EXECUTION_FILTERS ||
 			feature === LICENSE_FEATURES.EXTERNAL_SECRETS ||
-			feature === LICENSE_FEATURES.FOLDERS ||
-			feature === LICENSE_FEATURES.AI_BUILDER ||
-			feature === LICENSE_FEATURES.AI_ASSISTANT ||
-			feature === LICENSE_FEATURES.ASK_AI
+			feature === LICENSE_FEATURES.FOLDERS
 		) {
 			return true;
 		}

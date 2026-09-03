@@ -373,11 +373,11 @@ export class FrontendService {
 				dismissed: [],
 			},
 			askAi: {
-				enabled: true,
+				enabled: false,
 			},
 			aiBuilder: {
-				enabled: true,
-				setup: true,
+				enabled: false,
+				setup: false,
 			},
 			aiCredits: {
 				enabled: false,
