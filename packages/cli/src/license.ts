@@ -2,7 +2,6 @@ import type { LicenseProvider } from '@n8n/backend-common';
 import { Logger } from '@n8n/backend-common';
 import { GlobalConfig } from '@n8n/config';
 import {
-	DEFAULT_WORKFLOW_HISTORY_PRUNE_LIMIT,
 	LICENSE_FEATURES,
 	LICENSE_QUOTAS,
 	Time,
@@ -288,7 +287,10 @@ export class License implements LicenseProvider {
 			feature === LICENSE_FEATURES.DEBUG_IN_EDITOR ||
 			feature === LICENSE_FEATURES.ADVANCED_EXECUTION_FILTERS ||
 			feature === LICENSE_FEATURES.EXTERNAL_SECRETS ||
-			feature === LICENSE_FEATURES.FOLDERS
+			feature === LICENSE_FEATURES.FOLDERS ||
+			feature === LICENSE_FEATURES.AI_BUILDER ||
+			feature === LICENSE_FEATURES.AI_ASSISTANT ||
+			feature === LICENSE_FEATURES.ASK_AI
 		) {
 			return true;
 		}

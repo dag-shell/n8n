@@ -7,7 +7,7 @@ import { LicenseState } from '@n8n/backend-common';
 import { UNLIMITED_LICENSE_QUOTA } from '@n8n/constants';
 import type { User, Variables } from '@n8n/db';
 import { generateNanoId, VariablesRepository, GLOBAL_OWNER_ROLE, ProjectRepository } from '@n8n/db';
-import { Service } from '@n8n/di';
+import { Container, Service } from '@n8n/di';
 import { hasGlobalScope, Scope } from '@n8n/permissions';
 
 import { FeatureNotLicensedError } from '@/errors/feature-not-licensed.error';
@@ -29,14 +29,22 @@ const projectVariableScopes: Partial<Record<Scope, Scope>> = {
 
 @Service()
 export class VariablesService {
+	private projectRepository?: ProjectRepository;
+
 	constructor(
 		private readonly cacheService: CacheService,
 		private readonly variablesRepository: VariablesRepository,
 		private readonly eventService: EventService,
 		private readonly licenseState: LicenseState,
 		private readonly projectService: ProjectService,
-		private readonly projectRepository: ProjectRepository,
-	) {}
+		projectRepository?: ProjectRepository,
+	) {
+		this.projectRepository = projectRepository;
+	}
+
+	private getProjectRepository(): ProjectRepository {
+		return (this.projectRepository ??= Container.get(ProjectRepository));
+	}
 
 	private async findAll() {
 		const variables = await this.variablesRepository.find({
@@ -112,7 +120,7 @@ export class VariablesService {
 				(variable.project?.id ?? null) === filter.projectId);
 
 		if (user.role !== GLOBAL_OWNER_ROLE) {
-			const personalProject = await this.projectRepository.getPersonalProjectForUser(user.id);
+			const personalProject = await this.getProjectRepository().getPersonalProjectForUser(user.id);
 			const personalProjectId = personalProject?.id;
 			return allCachedVariables.filter(
 				(variable) => variable.project?.id === personalProjectId && stateAndProjectFilter(variable),
@@ -232,7 +240,9 @@ export class VariablesService {
 
 	async create(user: User, variable: CreateVariableRequestDto): Promise<Variables> {
 		if (user.role !== GLOBAL_OWNER_ROLE) {
-			const personalProject = await this.projectRepository.getPersonalProjectForUserOrFail(user.id);
+			const personalProject = await this.getProjectRepository().getPersonalProjectForUserOrFail(
+				user.id,
+			);
 			variable.projectId = personalProject.id;
 		}
 
@@ -284,7 +294,9 @@ export class VariablesService {
 		}
 
 		if (user.role !== GLOBAL_OWNER_ROLE) {
-			const personalProject = await this.projectRepository.getPersonalProjectForUserOrFail(user.id);
+			const personalProject = await this.getProjectRepository().getPersonalProjectForUserOrFail(
+				user.id,
+			);
 			variable.projectId = personalProject.id;
 		}
 

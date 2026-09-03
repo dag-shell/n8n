@@ -17,6 +17,7 @@ import type { User, ExecutionSummaries, EvaluationConfig } from '@n8n/db';
 import {
 	AiBuilderTemporaryWorkflowRepository,
 	ExecutionRepository,
+	GLOBAL_OWNER_ROLE,
 	ProjectRepository,
 	SharedWorkflowRepository,
 	WorkflowEntity,
@@ -608,14 +609,18 @@ export class InstanceAiAdapterService {
 
 	private createProjectScopeHelpers(user: User, boundProjectId?: string) {
 		const { projectRepository } = this;
-		let personalProjectIdPromise: Promise<string> | null = null;
+		let personalProjectIdPromise: Promise<string | undefined> | null = null;
 
-		const getPersonalProjectId = async () => {
-			personalProjectIdPromise ??= projectRepository
-				.getPersonalProjectForUserOrFail(user.id)
-				.then((p) => p.id);
+		const getPersonalProjectId = async (): Promise<string | undefined> => {
+			personalProjectIdPromise ??=
+				typeof projectRepository?.getPersonalProjectForUserOrFail === 'function'
+					? projectRepository.getPersonalProjectForUserOrFail(user.id).then((p) => p?.id)
+					: Promise.resolve(undefined);
 			return await personalProjectIdPromise;
 		};
+
+		const isNonOwner =
+			user.role !== GLOBAL_OWNER_ROLE && user.role?.slug !== GLOBAL_OWNER_ROLE.slug;
 
 		const assertProjectScope = async (scopes: Scope[], projectId: string) => {
 			const allowed = await userHasScopes(user, scopes, false, { projectId });
@@ -625,7 +630,8 @@ export class InstanceAiAdapterService {
 		};
 
 		const resolveProjectId = async (scopes: Scope[], providedProjectId?: string) => {
-			const projectId = providedProjectId ?? boundProjectId ?? (await getPersonalProjectId());
+			const personalId = await getPersonalProjectId();
+			const projectId = providedProjectId ?? boundProjectId ?? personalId ?? user.id;
 			await assertProjectScope(scopes, projectId);
 			return projectId;
 		};
@@ -640,7 +646,13 @@ export class InstanceAiAdapterService {
 			return boundProjectId;
 		};
 
-		return { getPersonalProjectId, assertProjectScope, resolveProjectId, resolveBoundProjectId };
+		return {
+			getPersonalProjectId,
+			assertProjectScope,
+			resolveProjectId,
+			resolveBoundProjectId,
+			isNonOwner,
+		};
 	}
 
 	private createWorkflowAdapter(
@@ -665,8 +677,21 @@ export class InstanceAiAdapterService {
 		} = this;
 		const logger = this.logger;
 		const assertNotReadOnly = () => this.assertInstanceNotReadOnly('workflows');
-		const { resolveBoundProjectId } = this.createProjectScopeHelpers(user, boundProjectId);
+		const { resolveBoundProjectId, getPersonalProjectId, isNonOwner } =
+			this.createProjectScopeHelpers(user, boundProjectId);
 		const redactParameters = !allowSendingParameterValues;
+
+		const assertWorkflowInPersonalProject = async (workflowId: string) => {
+			if (isNonOwner && typeof sharedWorkflowRepository?.getWorkflowOwningProject === 'function') {
+				const personalId = await getPersonalProjectId();
+				if (personalId) {
+					const owningProject = await sharedWorkflowRepository.getWorkflowOwningProject(workflowId);
+					if (owningProject && owningProject.id !== personalId) {
+						throw new WorkflowNotFoundError(workflowId);
+					}
+				}
+			}
+		};
 
 		/**
 		 * Instance AI writes bypass the REST controller, so the editor write lock
@@ -754,6 +779,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async get(workflowId: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const workflow = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:read',
 				]);
@@ -768,6 +794,7 @@ export class InstanceAiAdapterService {
 			async archive(workflowId: string) {
 				assertNotReadOnly();
 				await assertNotLockedByEditor(workflowId);
+				await assertWorkflowInPersonalProject(workflowId);
 				const result = await workflowService.archive(user, workflowId, { skipArchived: true });
 				if (!result) {
 					throw new WorkflowNotFoundError(workflowId);
@@ -777,6 +804,7 @@ export class InstanceAiAdapterService {
 
 			async unarchive(workflowId: string) {
 				assertNotReadOnly();
+				await assertWorkflowInPersonalProject(workflowId);
 				const result = await workflowService.unarchive(user, workflowId);
 				if (!result) {
 					throw new WorkflowNotFoundError(workflowId);
@@ -785,6 +813,7 @@ export class InstanceAiAdapterService {
 
 			async clearAiTemporary(workflowId: string) {
 				assertNotReadOnly();
+				await assertWorkflowInPersonalProject(workflowId);
 				const workflow = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:update',
 				]);
@@ -796,6 +825,7 @@ export class InstanceAiAdapterService {
 
 			async archiveIfAiTemporary(workflowId: string) {
 				assertNotReadOnly();
+				await assertWorkflowInPersonalProject(workflowId);
 				const workflow = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:update',
 				]);
@@ -818,6 +848,7 @@ export class InstanceAiAdapterService {
 				options?: { versionId?: string; name?: string; description?: string },
 			) {
 				await assertNotLockedByEditor(workflowId);
+				await assertWorkflowInPersonalProject(workflowId);
 				const wf = await workflowService.activateWorkflow(user, workflowId, {
 					versionId: options?.versionId,
 					name: options?.name,
@@ -844,6 +875,7 @@ export class InstanceAiAdapterService {
 
 			async unpublish(workflowId: string) {
 				await assertNotLockedByEditor(workflowId);
+				await assertWorkflowInPersonalProject(workflowId);
 				await workflowService.deactivateWorkflow(user, workflowId, {
 					source: 'n8n-ai',
 				});
@@ -851,6 +883,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getAsWorkflowJSON(workflowId: string, versionId?: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const wf = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:read',
 				]);
@@ -861,6 +894,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getPinnedDataSummary(workflowId: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const wf = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:read',
 				]);
@@ -872,6 +906,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getWorkflowHead(workflowId: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const head = await workflowFinderService.findWorkflowHeadForUser(workflowId, user, [
 					'workflow:read',
 				]);
@@ -880,6 +915,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getWorkflowSnapshot(workflowId: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const wf = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:read',
 				]);
@@ -892,6 +928,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getLatestRunData(workflowId: string) {
+				await assertWorkflowInPersonalProject(workflowId);
 				// Caller must be able to read the workflow to see its execution history.
 				// Silent null on no-access keeps validation usable even when access was
 				// revoked between fetches — validation degrades gracefully instead of
@@ -1038,6 +1075,7 @@ export class InstanceAiAdapterService {
 			) {
 				assertNotReadOnly();
 				await assertNotLockedByEditor(workflowId);
+				await assertWorkflowInPersonalProject(workflowId);
 				// Strip redactionPolicy if the user lacks the required directional scope —
 				// mirrors the check in WorkflowService.update().
 				const settings = (json.settings ?? {}) as IWorkflowSettings;
@@ -1123,6 +1161,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async listVersions(workflowId, options) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const take = options?.limit ?? 20;
 				const skip = options?.skip ?? 0;
 				const versions = await workflowHistoryService.getList(user, workflowId, take, skip);
@@ -1149,6 +1188,7 @@ export class InstanceAiAdapterService {
 			},
 
 			async getVersion(workflowId, versionId) {
+				await assertWorkflowInPersonalProject(workflowId);
 				const version = await workflowHistoryService.getVersion(user, workflowId, versionId);
 
 				// Fetch the workflow to determine active/draft version IDs
@@ -1181,7 +1221,9 @@ export class InstanceAiAdapterService {
 			},
 
 			async restoreVersion(workflowId, versionId) {
+				assertNotReadOnly();
 				await assertNotLockedByEditor(workflowId);
+				await assertWorkflowInPersonalProject(workflowId);
 				const version = await workflowHistoryService.getVersion(user, workflowId, versionId);
 
 				const updateData = workflowRepository.create({
@@ -1206,6 +1248,7 @@ export class InstanceAiAdapterService {
 							versionId: string,
 							data: { name?: string | null; description?: string | null },
 						) {
+							await assertWorkflowInPersonalProject(workflowId);
 							await workflowHistoryService.updateVersionForUser(user, workflowId, versionId, data);
 						},
 					}
@@ -1223,6 +1266,7 @@ export class InstanceAiAdapterService {
 			workflowRunner,
 			activeExecutions,
 			executionRepository,
+			sharedWorkflowRepository,
 			nodeTypes,
 			allowSendingParameterValues,
 			roleService,
@@ -1231,6 +1275,7 @@ export class InstanceAiAdapterService {
 			globalConfig,
 		} = this;
 		const assertNotReadOnly = () => this.assertInstanceNotReadOnly('executions');
+		const { getPersonalProjectId, isNonOwner } = this.createProjectScopeHelpers(user);
 
 		const DEFAULT_TIMEOUT_MS = 5 * Time.minutes.toMilliseconds;
 		const MAX_TIMEOUT_MS = 10 * Time.minutes.toMilliseconds;
@@ -1256,6 +1301,17 @@ export class InstanceAiAdapterService {
 			);
 			if (!workflow) {
 				throw new Error(`Execution ${executionId} not found`);
+			}
+			if (isNonOwner && typeof sharedWorkflowRepository?.getWorkflowOwningProject === 'function') {
+				const personalId = await getPersonalProjectId();
+				if (personalId) {
+					const owningProject = await sharedWorkflowRepository.getWorkflowOwningProject(
+						execution.workflowId,
+					);
+					if (owningProject && owningProject.id !== personalId) {
+						throw new Error(`Execution ${executionId} not found`);
+					}
+				}
 			}
 			return execution;
 		};
@@ -1299,7 +1355,28 @@ export class InstanceAiAdapterService {
 
 				const executions = await executionRepository.findManyByRangeQuery(query);
 
-				return executions.map(
+				let results = executions;
+				if (
+					isNonOwner &&
+					typeof sharedWorkflowRepository?.getWorkflowOwningProject === 'function'
+				) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const filtered: typeof executions = [];
+						for (const e of executions) {
+							if (!e.workflowId) continue;
+							const owningProject = await sharedWorkflowRepository.getWorkflowOwningProject(
+								e.workflowId,
+							);
+							if (owningProject && owningProject.id === personalId) {
+								filtered.push(e);
+							}
+						}
+						results = filtered;
+					}
+				}
+
+				return results.map(
 					(e): InstanceAiExecutionSummary => ({
 						id: e.id,
 						workflowId: e.workflowId,
@@ -1314,6 +1391,19 @@ export class InstanceAiAdapterService {
 
 			async run(workflowId: string, inputData, options) {
 				assertNotReadOnly();
+				if (
+					isNonOwner &&
+					typeof sharedWorkflowRepository?.getWorkflowOwningProject === 'function'
+				) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const owningProject =
+							await sharedWorkflowRepository.getWorkflowOwningProject(workflowId);
+						if (owningProject && owningProject.id !== personalId) {
+							throw new WorkflowNotFoundError(workflowId);
+						}
+					}
+				}
 				const workflow = await workflowFinderService.findWorkflowForUser(workflowId, user, [
 					'workflow:execute',
 				]);
@@ -1676,6 +1766,10 @@ export class InstanceAiAdapterService {
 			aiGatewayService,
 		} = this;
 		const getGatewayConfig = async () => await this.getGatewayConfigOrNull();
+		const { getPersonalProjectId, isNonOwner } = this.createProjectScopeHelpers(
+			user,
+			boundProjectId,
+		);
 
 		const adapter: InstanceAiCredentialService = {
 			async list(options) {
@@ -1683,9 +1777,11 @@ export class InstanceAiAdapterService {
 				// project's usable set (project-shared + global) — the same intersection
 				// `preventTampering` (workflow.service.ee.ts) accepts. A caller-supplied
 				// workflowId/projectId must not broaden it.
-				if (boundProjectId) {
+				const targetProjectId = boundProjectId ?? options?.projectId;
+
+				if (targetProjectId) {
 					const scoped = await credentialsService.getCredentialsAUserCanUseInAWorkflow(user, {
-						projectId: boundProjectId,
+						projectId: targetProjectId,
 					});
 					const filtered = options?.type ? scoped.filter((c) => c.type === options.type) : scoped;
 					return filtered.map((c): CredentialSummary => ({ id: c.id, name: c.name, type: c.type }));
@@ -1731,6 +1827,20 @@ export class InstanceAiAdapterService {
 			},
 
 			async get(credentialId: string) {
+				if (
+					isNonOwner &&
+					typeof credentialsService?.getCredentialsAUserCanUseInAWorkflow === 'function'
+				) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const scoped = await credentialsService.getCredentialsAUserCanUseInAWorkflow(user, {
+							projectId: personalId,
+						});
+						if (!scoped.some((c) => c.id === credentialId)) {
+							throw new Error(`Credential ${credentialId} not found`);
+						}
+					}
+				}
 				const credential = await credentialsService.getOne(user, credentialId, false);
 				return {
 					id: credential.id,
@@ -1740,10 +1850,38 @@ export class InstanceAiAdapterService {
 			},
 
 			async delete(credentialId: string) {
+				if (
+					isNonOwner &&
+					typeof credentialsService?.getCredentialsAUserCanUseInAWorkflow === 'function'
+				) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const scoped = await credentialsService.getCredentialsAUserCanUseInAWorkflow(user, {
+							projectId: personalId,
+						});
+						if (!scoped.some((c) => c.id === credentialId)) {
+							throw new Error(`Credential ${credentialId} not found`);
+						}
+					}
+				}
 				await credentialsService.delete(user, credentialId);
 			},
 
 			async test(credentialId: string) {
+				if (
+					isNonOwner &&
+					typeof credentialsService?.getCredentialsAUserCanUseInAWorkflow === 'function'
+				) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const scoped = await credentialsService.getCredentialsAUserCanUseInAWorkflow(user, {
+							projectId: personalId,
+						});
+						if (!scoped.some((c) => c.id === credentialId)) {
+							throw new Error(`Credential ${credentialId} not found or not accessible`);
+						}
+					}
+				}
 				// Mirror browser endpoint behavior: resolve credential access by scope and
 				// test using raw decrypted data from storage.
 				const credential = await credentialsFinderService.findCredentialForUser(
@@ -2203,7 +2341,7 @@ export class InstanceAiAdapterService {
 			dataTableId: string,
 			disambiguator?: { projectId?: string },
 		): Promise<DataTableRecord> => {
-			const projectIdFilter = disambiguator?.projectId;
+			const projectIdFilter = disambiguator?.projectId ?? boundProjectId;
 			const result = await resolveDataTableByIdOrName(dataTableRepository, logger, dataTableId, {
 				projectIdFilter,
 				accessFilter: async (id) => await userHasScopes(user, scopes, false, { dataTableId: id }),
@@ -3038,16 +3176,30 @@ export class InstanceAiAdapterService {
 			eventService,
 		} = this;
 		const assertNotReadOnly = (resource: string) => this.assertInstanceNotReadOnly(resource);
-		const { assertProjectScope } = this.createProjectScopeHelpers(user);
+		const { assertProjectScope, getPersonalProjectId, isNonOwner } =
+			this.createProjectScopeHelpers(user);
 
 		const adapter: InstanceAiWorkspaceService = {
 			async getProject(projectId: string): Promise<ProjectSummary | null> {
+				if (isNonOwner) {
+					const personalId = await getPersonalProjectId();
+					if (personalId && projectId !== personalId) return null;
+				}
 				const project = await projectService.getProjectWithScope(user, projectId, ['project:read']);
 				if (!project) return null;
 				return { id: project.id, name: project.name, type: project.type };
 			},
 
 			async listProjects(): Promise<ProjectSummary[]> {
+				if (isNonOwner) {
+					const personalId = await getPersonalProjectId();
+					if (personalId) {
+						const project = await projectService.getProjectWithScope(user, personalId, [
+							'project:read',
+						]);
+						return project ? [{ id: project.id, name: project.name, type: project.type }] : [];
+					}
+				}
 				const projects = await projectService.getAccessibleProjects(user);
 				return projects.map((p) => ({
 					id: p.id,

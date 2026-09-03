@@ -15,8 +15,14 @@ import {
 	AiClearSessionRequestDto,
 	AiGatewayUsageQueryDto,
 } from '@n8n/api-types';
-import { AuthenticatedRequest } from '@n8n/db';
+import {
+	AuthenticatedRequest,
+	GLOBAL_OWNER_ROLE,
+	ProjectRepository,
+	SharedWorkflowRepository,
+} from '@n8n/db';
 import { Body, Get, Licensed, Post, Query, RestController, GlobalScope } from '@n8n/decorators';
+import { Container } from '@n8n/di';
 import { type AiAssistantSDK, APIResponseError } from '@n8n_io/ai-assistant-sdk';
 import { Response } from 'express';
 import { strict as assert } from 'node:assert';
@@ -25,6 +31,7 @@ import { WritableStream } from 'node:stream/web';
 import { STREAM_SEPARATOR } from '@/constants';
 import { BadRequestError } from '@/errors/response-errors/bad-request.error';
 import { ContentTooLargeError } from '@/errors/response-errors/content-too-large.error';
+import { ForbiddenError } from '@/errors/response-errors/forbidden.error';
 import { InternalServerError } from '@/errors/response-errors/internal-server.error';
 import { NotFoundError } from '@/errors/response-errors/not-found.error';
 import { TooManyRequestsError } from '@/errors/response-errors/too-many-requests.error';
@@ -44,7 +51,49 @@ export class AiController {
 		private readonly freeAiCreditsService: FreeAiCreditsService,
 		private readonly aiUsageService: AiUsageService,
 		private readonly aiGatewayService: AiGatewayService,
+		private projectRepository?: ProjectRepository,
+		private sharedWorkflowRepository?: SharedWorkflowRepository,
 	) {}
+
+	private getProjectRepository(): ProjectRepository | undefined {
+		if (this.projectRepository) return this.projectRepository;
+		try {
+			this.projectRepository = Container.get(ProjectRepository);
+			return this.projectRepository;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private getSharedWorkflowRepository(): SharedWorkflowRepository | undefined {
+		if (this.sharedWorkflowRepository) return this.sharedWorkflowRepository;
+		try {
+			this.sharedWorkflowRepository = Container.get(SharedWorkflowRepository);
+			return this.sharedWorkflowRepository;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private async assertWorkflowInPersonalProject(
+		user: AuthenticatedRequest['user'],
+		workflowId?: string,
+	) {
+		if (
+			user.role !== GLOBAL_OWNER_ROLE &&
+			user.role?.slug !== GLOBAL_OWNER_ROLE.slug &&
+			workflowId
+		) {
+			const projectRepo = this.getProjectRepository();
+			const sharedRepo = this.getSharedWorkflowRepository();
+			if (!projectRepo || !sharedRepo) return;
+			const owningProject = await sharedRepo.getWorkflowOwningProject(workflowId);
+			const personalProject = await projectRepo.getPersonalProjectForUserOrFail(user.id);
+			if (owningProject && personalProject && owningProject.id !== personalProject.id) {
+				throw new ForbiddenError('You do not have access to this workflow');
+			}
+		}
+	}
 
 	private toAiAssistantResponseError(error: APIResponseError) {
 		switch (error.statusCode) {
@@ -80,6 +129,7 @@ export class AiController {
 			res.on('close', handleClose);
 
 			const { id, text, workflowContext, featureFlags, versionId } = payload.payload;
+			await this.assertWorkflowInPersonalProject(req.user, id);
 			const aiResponse = this.workflowBuilderService.chat(
 				{
 					id,
@@ -237,6 +287,7 @@ export class AiController {
 		@Body payload: AiSessionRetrievalRequestDto,
 	) {
 		try {
+			await this.assertWorkflowInPersonalProject(req.user, payload.workflowId);
 			const sessions = await this.workflowBuilderService.getSessions(
 				payload.workflowId,
 				req.user,
@@ -294,7 +345,7 @@ export class AiController {
 
 	@Licensed('feat:aiBuilder')
 	@Get('/build/credits')
-	@GlobalScope('instanceAi:manage')
+	@GlobalScope('instanceAi:message')
 	async getBuilderCredits(
 		req: AuthenticatedRequest,
 		_: Response,
@@ -315,6 +366,7 @@ export class AiController {
 		@Body payload: AiTruncateMessagesRequestDto,
 	): Promise<{ success: boolean }> {
 		try {
+			await this.assertWorkflowInPersonalProject(req.user, payload.workflowId);
 			const success = await this.workflowBuilderService.truncateMessagesAfter(
 				payload.workflowId,
 				req.user,
@@ -336,6 +388,7 @@ export class AiController {
 		@Body payload: AiClearSessionRequestDto,
 	): Promise<{ success: boolean }> {
 		try {
+			await this.assertWorkflowInPersonalProject(req.user, payload.workflowId);
 			await this.workflowBuilderService.clearSession(payload.workflowId, req.user);
 			return { success: true };
 		} catch (e) {

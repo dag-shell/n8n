@@ -30,7 +30,14 @@ import type {
 } from '@n8n/api-types';
 import { ModuleRegistry } from '@n8n/backend-common';
 import { GlobalConfig } from '@n8n/config';
-import { AuthenticatedRequest, User, UserRepository } from '@n8n/db';
+import {
+	AuthenticatedRequest,
+	GLOBAL_OWNER_ROLE,
+	ProjectRepository,
+	SharedWorkflowRepository,
+	User,
+	UserRepository,
+} from '@n8n/db';
 import { Container } from '@n8n/di';
 import {
 	RestController,
@@ -147,8 +154,30 @@ export class InstanceAiController {
 		private readonly instanceAiErrorReporter: InstanceAiErrorReporterService,
 		private readonly publisher: Publisher,
 		globalConfig: GlobalConfig,
+		private projectRepository?: ProjectRepository,
+		private sharedWorkflowRepository?: SharedWorkflowRepository,
 	) {
 		this.gatewayApiKey = globalConfig.instanceAi.gatewayApiKey;
+	}
+
+	private getProjectRepository(): ProjectRepository | undefined {
+		if (this.projectRepository) return this.projectRepository;
+		try {
+			this.projectRepository = Container.get(ProjectRepository);
+			return this.projectRepository;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private getSharedWorkflowRepository(): SharedWorkflowRepository | undefined {
+		if (this.sharedWorkflowRepository) return this.sharedWorkflowRepository;
+		try {
+			this.sharedWorkflowRepository = Container.get(SharedWorkflowRepository);
+			return this.sharedWorkflowRepository;
+		} catch {
+			return undefined;
+		}
 	}
 
 	private requireInstanceAiEnabled(): void {
@@ -232,6 +261,31 @@ export class InstanceAiController {
 		// One active run per thread
 		if (this.instanceAiService.hasActiveRun(threadId)) {
 			throw new ConflictError('A run is already active for this thread');
+		}
+
+		if (
+			req.user.role !== GLOBAL_OWNER_ROLE &&
+			req.user.role?.slug !== GLOBAL_OWNER_ROLE.slug &&
+			payload.attachments
+		) {
+			const personalProject = await this.getProjectRepository()?.getPersonalProjectForUserOrFail(
+				req.user.id,
+			);
+			for (const attachment of payload.attachments) {
+				if (
+					attachment.type === 'workflow' &&
+					'workflowId' in attachment &&
+					typeof attachment.workflowId === 'string' &&
+					attachment.workflowId
+				) {
+					const owningProject = await this.getSharedWorkflowRepository()?.getWorkflowOwningProject(
+						attachment.workflowId,
+					);
+					if (owningProject && personalProject && owningProject.id !== personalProject.id) {
+						throw new ForbiddenError('You do not have access to the attached workflow');
+					}
+				}
+			}
 		}
 
 		const runId = this.instanceAiService.startRun(
@@ -851,6 +905,14 @@ export class InstanceAiController {
 		@Body payload: InstanceAiEnsureThreadRequest,
 	) {
 		this.requireInstanceAiEnabled();
+		if (req.user.role !== GLOBAL_OWNER_ROLE && req.user.role?.slug !== GLOBAL_OWNER_ROLE.slug) {
+			const personalProject = await this.getProjectRepository()?.getPersonalProjectForUserOrFail(
+				req.user.id,
+			);
+			if (personalProject) {
+				payload.projectId = personalProject.id;
+			}
+		}
 		const project = await this.projectService.getProjectWithScope(req.user, payload.projectId, [
 			'project:read',
 		]);
