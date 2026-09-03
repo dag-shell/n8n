@@ -3,7 +3,7 @@ import { nextTick, computed } from 'vue';
 import { useI18n } from '@n8n/i18n';
 import { useRouter } from 'vue-router';
 import { VIEWS } from '@/app/constants';
-import { type IMenuItem, N8nResizeWrapper } from '@n8n/design-system';
+import { type IMenuItem, N8nResizeWrapper, N8nIcon, N8nText, N8nTooltip } from '@n8n/design-system';
 import { useSettingsItems } from '@/app/composables/useSettingsItems';
 import { useKeybindings } from '@/app/composables/useKeybindings';
 import {
@@ -15,6 +15,7 @@ import { N8nScrollArea } from '@n8n/design-system';
 import BottomMenu from '@/app/components/BottomMenu.vue';
 import MainSidebarHeader from '@/app/components/MainSidebarHeader.vue';
 import ChatSidebarContent from '@/features/ai/chatHub/components/ChatSidebarContent.vue';
+import { hasPermission } from '@/app/utils/rbac/permissions';
 
 const i18n = useI18n();
 const router = useRouter();
@@ -44,6 +45,10 @@ function openCommandBar(event: MouseEvent) {
 	});
 }
 
+function onReturn() {
+	void router.push({ name: VIEWS.HOME_OVERVIEW });
+}
+
 const { settingsItems, handleSettingsItemSelect } = useSettingsItems();
 
 const mainMenuItems = computed<IMenuItem[]>(() => [
@@ -51,7 +56,7 @@ const mainMenuItems = computed<IMenuItem[]>(() => [
 		id: 'settings',
 		label: i18n.baseText('mainSidebar.settings'),
 		icon: 'settings',
-		available: true,
+		available: hasPermission(['instanceOwner']),
 		children: settingsItems.value,
 	},
 ]);
@@ -93,10 +98,29 @@ const onLogout = () => {
 			@collapse="toggleCollapse"
 			@open-command-bar="openCommandBar"
 		/>
+		<div
+			:class="[$style.returnButton, { [$style.returnButtonCollapsed]: isCollapsed }]"
+			data-test-id="chat-sidebar-back"
+			@click="onReturn"
+		>
+			<N8nTooltip
+				:disabled="!isCollapsed"
+				placement="right"
+				:content="i18n.baseText('generic.back') || 'Back'"
+			>
+				<div :class="$style.returnContent">
+					<N8nIcon icon="arrow-left" size="medium" />
+					<N8nText v-if="!isCollapsed" bold size="small">
+						{{ i18n.baseText('generic.back') || 'Back' }}
+					</N8nText>
+				</div>
+			</N8nTooltip>
+		</div>
 		<N8nScrollArea as-child>
 			<div :class="$style.scrollArea">
 				<ChatSidebarContent :is-collapsed="isCollapsed" />
 				<BottomMenu
+					v-if="visibleMenuItems.length > 0"
 					:items="visibleMenuItems"
 					:is-collapsed="isCollapsed"
 					@select="handleSettingsItemSelect"
@@ -126,6 +150,34 @@ const onLogout = () => {
 	&.sideMenuResizing {
 		transition: none;
 	}
+}
+
+.returnButton {
+	padding: var(--spacing--2xs) var(--spacing--xs);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	border-bottom: var(--border);
+	color: var(--color--text--base);
+	transition:
+		color 0.15s ease,
+		background-color 0.15s ease;
+
+	&:hover {
+		color: var(--color--primary);
+		background-color: var(--color--background--light-1);
+	}
+
+	&.returnButtonCollapsed {
+		padding: var(--spacing--xs);
+		justify-content: center;
+	}
+}
+
+.returnContent {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--3xs);
 }
 
 .scrollArea {
