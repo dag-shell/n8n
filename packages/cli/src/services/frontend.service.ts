@@ -256,8 +256,7 @@ export class FrontendService {
 				proxy: `${instanceBaseUrl}/${restEndpoint}/ph`,
 				debug: this.globalConfig.logging.level === 'debug',
 			},
-			personalizationSurveyEnabled:
-				this.globalConfig.personalization.enabled && this.globalConfig.diagnostics.enabled,
+			personalizationSurveyEnabled: false,
 			defaultLocale: this.globalConfig.defaultLocale,
 			userManagement: {
 				quota: this.license.getUsersLimit(),
