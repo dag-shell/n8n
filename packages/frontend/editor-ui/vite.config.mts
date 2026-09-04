@@ -177,7 +177,7 @@ export default defineConfig({
 	html: { cspNonce: HTML_NONCE_PLACEHOLDER },
 	resolve: { alias, dedupe: singleInstanceDedupe },
 	base: publicPath,
-	envPrefix: ['VUE', 'N8N_ENV_FEAT'],
+	envPrefix: ['VUE', 'N8N_ENV_FEAT', 'VITE'],
 	css: {
 		preprocessorMaxWorkers: 2,
 		preprocessorOptions: {

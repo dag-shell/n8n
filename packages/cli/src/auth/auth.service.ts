@@ -126,6 +126,8 @@ export class AuthService {
 	}: CreateAuthMiddlewareOptions) {
 		return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
 			const token = req.cookies[AUTH_COOKIE_NAME];
+			let authErrorCode: string | null = null;
+			let authErrorMessage = 'Unauthorized';
 
 			if (token) {
 				try {
@@ -165,7 +167,15 @@ export class AuthService {
 						usedMfa,
 					};
 				} catch (error) {
-					if (error instanceof JsonWebTokenError || error instanceof AuthError) {
+					if (error instanceof TokenExpiredError) {
+						authErrorCode = 'TOKEN_EXPIRED';
+						authErrorMessage = 'jwt expired';
+						this.clearCookie(res);
+					} else if (error instanceof JsonWebTokenError) {
+						authErrorCode = 'BACKEND_UNAUTHORIZED';
+						this.clearCookie(res);
+					} else if (error instanceof AuthError) {
+						authErrorCode = 'BACKEND_UNAUTHORIZED';
 						this.clearCookie(res);
 					} else {
 						throw error;
@@ -178,7 +188,17 @@ export class AuthService {
 
 			if (Object.hasOwn(req, 'user') && req.user) next();
 			else if (shouldSkipAuth) next();
-			else res.status(401).json({ status: 'error', message: 'Unauthorized' });
+			else {
+				const errorPayload: Record<string, unknown> = {
+					status: 'error',
+					message: authErrorMessage,
+				};
+				if (authErrorCode) {
+					errorPayload.code = authErrorCode;
+					errorPayload.errorCode = authErrorCode;
+				}
+				res.status(401).json(errorPayload);
+			}
 		};
 	}
 

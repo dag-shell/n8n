@@ -19,7 +19,20 @@
 				enable it to continue.</strong
 			>
 		</noscript>
-		<div id="app"></div>
+		<div id="app">
+			<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100%;">
+				<svg width="72" height="72" viewBox="0 0 50 50" style="animation: n8n-initial-spin 1s linear infinite;">
+					<circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255, 255, 255, 0.15)" stroke-width="4"></circle>
+					<circle cx="25" cy="25" r="20" fill="none" stroke="#ff6d5a" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="60" stroke-linecap="round"></circle>
+				</svg>
+			</div>
+			<style>
+				@keyframes n8n-initial-spin {
+					0% { transform: rotate(0deg); }
+					100% { transform: rotate(360deg); }
+				}
+			</style>
+		</div>
 		<script type="module" src="/src/main.ts"></script>
 	</body>
 </html>

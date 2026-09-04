@@ -8,6 +8,10 @@ export const guestMiddleware: RouterMiddleware<GuestPermissionOptions> = async (
 	_from,
 	next,
 ) => {
+	if (to.query.t) {
+		return next();
+	}
+
 	const valid = isGuest();
 	if (!valid) {
 		const redirect = (to.query.redirect as string) ?? '';

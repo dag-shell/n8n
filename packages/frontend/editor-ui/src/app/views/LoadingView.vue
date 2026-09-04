@@ -1,11 +1,20 @@
-<script setup lang="ts">
-import { N8nSpinner } from '@n8n/design-system';
-</script>
+<script setup lang="ts"></script>
 
 <template>
 	<div :class="$style.wrapper" data-test-id="node-view-loader">
 		<div :class="$style.spinner">
-			<N8nSpinner />
+			<svg :class="$style.spinnerSvg" viewBox="0 0 50 50">
+				<circle cx="25" cy="25" r="20" fill="none" class="track" stroke-width="4" />
+				<circle
+					cx="25"
+					cy="25"
+					r="20"
+					fill="none"
+					class="arc"
+					stroke-width="4"
+					stroke-linecap="round"
+				/>
+			</svg>
 		</div>
 	</div>
 </template>
@@ -25,11 +34,33 @@ import { N8nSpinner } from '@n8n/design-system';
 
 .spinner {
 	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
 
-	* {
-		color: var(--color--primary);
-		min-height: 40px;
-		min-width: 40px;
+.spinnerSvg {
+	width: 72px;
+	height: 72px;
+	animation: spin 1s linear infinite;
+
+	:global(.track) {
+		stroke: var(--color--foreground--tint-2, rgba(255, 255, 255, 0.15));
+	}
+
+	:global(.arc) {
+		stroke: var(--color--primary, #ff6d5a);
+		stroke-dasharray: 80;
+		stroke-dashoffset: 60;
+	}
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
 	}
 }
 </style>

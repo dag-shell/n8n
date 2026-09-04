@@ -134,7 +134,7 @@ export const useSettingsStore = defineStore(STORES.SETTINGS, () => {
 		() => isAiAssistantEnabled.value || isAiBuilderEnabled.value,
 	);
 
-	const showSetupPage = computed(() => userManagement.value.showSetupOnFirstLoad);
+	const showSetupPage = computed(() => false);
 
 	const deploymentType = computed(() => settings.value.deployment?.type || 'default');
 

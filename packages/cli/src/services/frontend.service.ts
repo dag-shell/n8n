@@ -156,10 +156,7 @@ export class FrontendService {
 	}
 
 	private async getShowSetupOnFirstLoad() {
-		const previewMode = process.env.N8N_PREVIEW_MODE === 'true';
-		const hasInstanceOwner = await this.ownershipService.hasInstanceOwner();
-		// In preview mode, skip the setup redirect to allow accessing demo routes
-		return previewMode ? false : !hasInstanceOwner;
+		return false;
 	}
 
 	private async initSettings() {

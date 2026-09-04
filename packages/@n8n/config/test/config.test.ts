@@ -146,8 +146,8 @@ describe('GlobalConfig', () => {
 		userManagement: {
 			inviteLinksEmailOnly: false,
 			jwtSecret: '',
-			jwtSessionDurationHours: 168,
-			jwtRefreshTimeoutHours: 0,
+			jwtSessionDurationHours: 24,
+			jwtRefreshTimeoutHours: -1,
 			password: {
 				minLength: 8,
 			},

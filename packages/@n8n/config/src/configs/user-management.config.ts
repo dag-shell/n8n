@@ -120,7 +120,7 @@ export class UserManagementConfig {
 
 	/** How long (in hours) before the JWT expires. */
 	@Env('N8N_USER_MANAGEMENT_JWT_DURATION_HOURS')
-	jwtSessionDurationHours: number = 168;
+	jwtSessionDurationHours: number = 24;
 
 	/**
 	 * Security Control: Invite Link Exposure Prevention
@@ -138,7 +138,7 @@ export class UserManagementConfig {
 	 * - `-1` means it will never refresh. This forces users to log back in after expiration.
 	 */
 	@Env('N8N_USER_MANAGEMENT_JWT_REFRESH_TIMEOUT_HOURS')
-	jwtRefreshTimeoutHours: number = 0;
+	jwtRefreshTimeoutHours: number = -1;
 
 	sanitize() {
 		if (this.jwtRefreshTimeoutHours >= this.jwtSessionDurationHours) {

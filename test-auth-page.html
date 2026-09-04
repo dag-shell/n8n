@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>n8n Auth Test & API Playground</title>
+	<style>
+		:root {
+			--bg-color: #0b0f19;
+			--card-bg: #151d30;
+			--card-bg-subtle: #1c2640;
+			--text-main: #f8fafc;
+			--text-muted: #94a3b8;
+			--border-color: #2b3954;
+			--accent: #ff6d5a;
+			--accent-hover: #e05644;
+			--accent-soft: rgba(255, 109, 90, 0.15);
+			--accent-blue: #38bdf8;
+			--error-bg: rgba(239, 68, 68, 0.15);
+			--error-border: #ef4444;
+			--error-text: #fca5a5;
+			--success-bg: rgba(34, 197, 94, 0.15);
+			--success-border: #22c55e;
+			--success-text: #86efac;
+			--code-bg: #0d1322;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+		}
+
+		body {
+			background-color: var(--bg-color);
+			color: var(--text-main);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 24px 16px;
+		}
+
+		.container {
+			width: 100%;
+			max-width: 860px;
+			background-color: var(--card-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 14px;
+			box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6);
+			overflow: hidden;
+		}
+
+		.header {
+			padding: 18px 24px;
+			border-bottom: 1px solid var(--border-color);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: rgba(11, 15, 25, 0.4);
+		}
+
+		.header h1 {
+			font-size: 1.15rem;
+			font-weight: 700;
+			letter-spacing: -0.01em;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.header h1 span {
+			color: var(--accent);
+		}
+
+		.badge {
+			font-size: 0.75rem;
+			padding: 4px 10px;
+			border-radius: 9999px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		.badge.error {
+			background: var(--error-bg);
+			border: 1px solid var(--error-border);
+			color: var(--error-text);
+		}
+
+		.badge.success {
+			background: var(--success-bg);
+			border: 1px solid var(--success-border);
+			color: var(--success-text);
+		}
+
+		.badge.idle {
+			background: rgba(148, 163, 184, 0.15);
+			border: 1px solid var(--text-muted);
+			color: var(--text-muted);
+		}
+
+		/* Tabs Navigation */
+		.tabs-nav {
+			display: flex;
+			border-bottom: 1px solid var(--border-color);
+			background-color: rgba(15, 23, 42, 0.5);
+		}
+
+		.tab-btn {
+			flex: 1;
+			background: transparent;
+			border: none;
+			border-bottom: 2px solid transparent;
+			color: var(--text-muted);
+			padding: 13px 16px;
+			font-size: 0.875rem;
+			font-weight: 600;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			transition: all 0.2s;
+			border-radius: 0;
+		}
+
+		.tab-btn:hover {
+			color: var(--text-main);
+			background: rgba(255, 255, 255, 0.03);
+		}
+
+		.tab-btn.active {
+			color: var(--accent);
+			border-bottom-color: var(--accent);
+			background: rgba(255, 109, 90, 0.05);
+		}
+
+		.content {
+			padding: 24px;
+		}
+
+		.tab-panel {
+			display: none;
+			flex-direction: column;
+			gap: 20px;
+		}
+
+		.tab-panel.active {
+			display: flex;
+		}
+
+		.card {
+			background: var(--card-bg-subtle);
+			border: 1px solid var(--border-color);
+			border-radius: 10px;
+			padding: 20px;
+		}
+
+		.card-title {
+			font-size: 0.95rem;
+			font-weight: 700;
+			margin-bottom: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			color: var(--text-main);
+		}
+
+		.card-subtitle {
+			font-size: 0.8rem;
+			color: var(--text-muted);
+			font-weight: 400;
+			margin-top: -10px;
+			margin-bottom: 16px;
+			line-height: 1.4;
+		}
+
+		.form-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.form-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			margin-bottom: 14px;
+		}
+
+		.form-group.full-width {
+			grid-column: span 2;
+		}
+
+		.form-group label {
+			font-size: 0.8rem;
+			font-weight: 600;
+			color: var(--text-muted);
+		}
+
+		.form-group input,
+		.form-group select,
+		.form-group textarea {
+			background: var(--code-bg);
+			border: 1px solid var(--border-color);
+			color: var(--text-main);
+			padding: 10px 12px;
+			border-radius: 6px;
+			font-size: 0.875rem;
+			outline: none;
+			transition: border-color 0.2s;
+		}
+
+		.form-group input:focus,
+		.form-group select:focus,
+		.form-group textarea:focus {
+			border-color: var(--accent);
+		}
+
+		.form-group textarea {
+			resize: vertical;
+			font-family: monospace;
+			font-size: 0.825rem;
+			line-height: 1.4;
+		}
+
+		.checkbox-label {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 0.85rem;
+			color: var(--text-muted);
+			cursor: pointer;
+			user-select: none;
+			margin-top: 4px;
+			margin-bottom: 12px;
+		}
+
+		.checkbox-label input[type="checkbox"] {
+			accent-color: var(--accent);
+			width: 16px;
+			height: 16px;
+			cursor: pointer;
+		}
+
+		button.primary-btn {
+			background-color: var(--accent);
+			color: #ffffff;
+			border: none;
+			padding: 11px 18px;
+			border-radius: 6px;
+			font-size: 0.9rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background-color 0.2s;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			width: 100%;
+		}
+
+		button.primary-btn:hover {
+			background-color: var(--accent-hover);
+		}
+
+		button.primary-btn:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		button.secondary-btn {
+			background-color: rgba(255, 255, 255, 0.08);
+			color: var(--text-main);
+			border: 1px solid var(--border-color);
+			padding: 8px 14px;
+			border-radius: 6px;
+			font-size: 0.825rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		button.secondary-btn:hover {
+			background-color: rgba(255, 255, 255, 0.14);
+		}
+
+		/* Status and Result Box */
+		.status-box {
+			padding: 14px 16px;
+			border-radius: 8px;
+			border: 1px solid var(--border-color);
+			background: var(--code-bg);
+			font-size: 0.875rem;
+			margin-top: 14px;
+			display: none;
+		}
+
+		.status-box.error {
+			display: block;
+			border-color: var(--error-border);
+			background: var(--error-bg);
+			color: var(--error-text);
+		}
+
+		.status-box.success {
+			display: block;
+			border-color: var(--success-border);
+			background: var(--success-bg);
+			color: var(--success-text);
+		}
+
+		.status-box.info {
+			display: block;
+			border-color: var(--accent-blue);
+			background: rgba(56, 189, 248, 0.12);
+			color: #bae6fd;
+		}
+
+		.status-box .token-details {
+			margin-top: 10px;
+			padding-top: 10px;
+			border-top: 1px solid rgba(255, 255, 255, 0.1);
+			font-family: monospace;
+			font-size: 0.8rem;
+			word-break: break-all;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		/* Message Box for Redirect listener */
+		.message-box {
+			padding: 16px 20px;
+			border-radius: 8px;
+			border: 1px solid var(--border-color);
+			background-color: var(--code-bg);
+		}
+
+		.message-box.has-message {
+			border-color: var(--error-border);
+			background: var(--error-bg);
+		}
+
+		.message-box .label {
+			font-size: 0.75rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--text-muted);
+			margin-bottom: 6px;
+		}
+
+		.message-box.has-message .label {
+			color: var(--error-text);
+		}
+
+		.message-box .value {
+			font-size: 1.05rem;
+			font-weight: 500;
+			word-break: break-word;
+		}
+
+		.table-wrapper {
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			overflow: hidden;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.875rem;
+		}
+
+		th, td {
+			padding: 10px 14px;
+			text-align: left;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		th {
+			background-color: rgba(15, 23, 42, 0.5);
+			color: var(--text-muted);
+			font-weight: 600;
+		}
+
+		tr:last-child td {
+			border-bottom: none;
+		}
+
+		code {
+			background-color: rgba(0, 0, 0, 0.3);
+			padding: 2px 6px;
+			border-radius: 4px;
+			font-family: monospace;
+			font-size: 0.85em;
+			color: var(--accent-blue);
+		}
+
+		.empty-notice {
+			padding: 16px;
+			text-align: center;
+			color: var(--text-muted);
+			font-size: 0.875rem;
+		}
+
+		/* Playground Presets */
+		.presets-bar {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+			margin-bottom: 14px;
+		}
+
+		.preset-chip {
+			background: rgba(255, 255, 255, 0.05);
+			border: 1px solid var(--border-color);
+			padding: 5px 10px;
+			border-radius: 6px;
+			font-size: 0.75rem;
+			font-weight: 600;
+			color: var(--text-muted);
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.preset-chip:hover {
+			background: var(--accent-soft);
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		/* Playground Output View */
+		.response-meta {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 10px;
+			padding-bottom: 8px;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.response-status-badge {
+			font-size: 0.8rem;
+			padding: 3px 8px;
+			border-radius: 4px;
+			font-weight: 700;
+			font-family: monospace;
+		}
+
+		.response-time {
+			font-size: 0.75rem;
+			color: var(--text-muted);
+			font-family: monospace;
+		}
+
+		pre.code-block {
+			background: var(--code-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			padding: 12px;
+			font-family: monospace;
+			font-size: 0.825rem;
+			color: #e2e8f0;
+			overflow-x: auto;
+			max-height: 280px;
+			white-space: pre-wrap;
+			word-break: break-all;
+		}
+
+		/* Cookie Bar */
+		.cookie-box {
+			background: var(--code-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			padding: 12px 14px;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.cookie-box-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.cookie-box-title {
+			font-size: 0.8rem;
+			font-weight: 700;
+			color: var(--text-muted);
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		.cookie-item {
+			font-family: monospace;
+			font-size: 0.8rem;
+			background: rgba(255, 255, 255, 0.03);
+			padding: 6px 10px;
+			border-radius: 4px;
+			word-break: break-all;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+		}
+
+		.cookie-item.auth {
+			border-left: 3px solid var(--accent);
+			background: var(--accent-soft);
+		}
+
+		@media (max-width: 640px) {
+			.form-grid {
+				grid-template-columns: 1fr;
+			}
+			.form-group.full-width {
+				grid-column: span 1;
+			}
+			.tabs-nav {
+				flex-direction: column;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h1><span>n8n</span> Auth & API Playground</h1>
+			<span id="status-badge" class="badge idle">Ready</span>
+		</div>
+
+		<!-- Navigation Tabs -->
+		<div class="tabs-nav">
+			<button id="tab-btn-login" class="tab-btn active" type="button" onclick="switchTab('login')">
+				🔐 Login & Forward
+			</button>
+			<button id="tab-btn-playground" class="tab-btn" type="button" onclick="switchTab('playground')">
+				🧪 API Playground
+			</button>
+			<button id="tab-btn-listener" class="tab-btn" type="button" onclick="switchTab('listener')">
+				📥 Redirect Listener
+			</button>
+			<button id="tab-btn-manual" class="tab-btn" type="button" onclick="switchTab('manual')">
+				🚀 Manual /signin
+			</button>
+		</div>
+
+		<div class="content">
+			<!-- TAB 1: LOGIN & FORWARD -->
+			<div id="tab-login" class="tab-panel active">
+				<div class="card">
+					<div class="card-title">
+						<span>Log In & Forward to /signin</span>
+						<span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">POST /rest/login</span>
+					</div>
+					<div class="card-subtitle">
+						Authenticates via <code>POST http://localhost:5678/rest/login</code>, extracts the <code>n8n-auth</code> token from the response or cookie, and forwards to <code>/signin?t=&lt;token&gt;&amp;exp=&lt;timestamp&gt;</code>.
+					</div>
+
+					<form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit();">
+						<div class="form-grid">
+							<div class="form-group full-width">
+								<label for="login-base-url">n8n Base URL</label>
+								<input id="login-base-url" type="text" value="http://localhost:5678" required />
+							</div>
+
+							<div class="form-group">
+								<label for="login-email">Email or LDAP Login ID (emailOrLdapLoginId)</label>
+								<input id="login-email" type="text" placeholder="user@n8n.io" required />
+							</div>
+
+							<div class="form-group">
+								<label for="login-password">Password</label>
+								<input id="login-password" type="password" placeholder="••••••••" required />
+							</div>
+
+							<div class="form-group">
+								<label for="login-cookie-name">Auth Cookie Name</label>
+								<input id="login-cookie-name" type="text" value="n8n-auth" />
+							</div>
+
+							<div class="form-group">
+								<label for="login-forward-mode">Action After Login</label>
+								<select id="login-forward-mode">
+									<option value="auto">Auto-forward to /signin immediately</option>
+									<option value="prompt">Show token & wait for click</option>
+								</select>
+							</div>
+						</div>
+
+						<label class="checkbox-label">
+							<input id="login-credentials-checkbox" type="checkbox" checked />
+							<span>Include browser credentials (cookies) in login request</span>
+						</label>
+
+						<button id="login-submit-btn" class="primary-btn" type="submit">
+							<span>Log In & Forward to /signin</span>
+						</button>
+					</form>
+
+					<!-- Login Status / Output -->
+					<div id="login-status" class="status-box">
+						<div id="login-status-msg" style="font-weight: 600;"></div>
+						<div id="login-token-details" class="token-details" style="display: none;">
+							<div><strong>Extracted Token:</strong> <code id="login-display-token"></code></div>
+							<div><strong>Expiration (exp):</strong> <code id="login-display-exp"></code> <span id="login-display-exp-date" style="color: var(--text-muted); font-size: 0.75rem;"></span></div>
+							<div><strong>Destination:</strong> <code id="login-display-destination"></code></div>
+							<div style="margin-top: 6px;">
+								<button id="login-manual-forward-btn" class="secondary-btn" type="button" style="background: var(--accent); color: white; border: none; padding: 6px 12px;">
+									Open /signin Now ➔
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- TAB 2: API PLAYGROUND -->
+			<div id="tab-playground" class="tab-panel">
+				<div class="card">
+					<div class="card-title">
+						<span>API Request Tester</span>
+						<span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Interactive REST Client</span>
+					</div>
+
+					<div class="presets-bar">
+						<span style="font-size: 0.75rem; color: var(--text-muted); align-self: center; font-weight: 600;">Presets:</span>
+						<button class="preset-chip" type="button" onclick="loadPreset('login-post')">POST /rest/login</button>
+						<button class="preset-chip" type="button" onclick="loadPreset('login-get')">GET /rest/login (Current User)</button>
+						<button class="preset-chip" type="button" onclick="loadPreset('users-get')">GET /rest/users</button>
+						<button class="preset-chip" type="button" onclick="loadPreset('logout-post')">POST /rest/logout</button>
+					</div>
+
+					<form id="playground-form" onsubmit="event.preventDefault(); handlePlaygroundSubmit();">
+						<div class="form-grid">
+							<div class="form-group" style="grid-column: span 1;">
+								<label for="pg-method">HTTP Method</label>
+								<select id="pg-method">
+									<option value="POST">POST</option>
+									<option value="GET">GET</option>
+									<option value="PUT">PUT</option>
+									<option value="PATCH">PATCH</option>
+									<option value="DELETE">DELETE</option>
+								</select>
+							</div>
+
+							<div class="form-group" style="grid-column: span 1;">
+								<label for="pg-credentials">Credentials Mode</label>
+								<select id="pg-credentials">
+									<option value="include">include (send & receive cookies)</option>
+									<option value="same-origin">same-origin</option>
+									<option value="omit">omit</option>
+								</select>
+							</div>
+
+							<div class="form-group full-width">
+								<label for="pg-url">Request URL</label>
+								<input id="pg-url" type="text" value="http://localhost:5678/rest/login" required />
+							</div>
+
+							<div class="form-group full-width">
+								<label for="pg-headers">Headers (key: value per line)</label>
+								<textarea id="pg-headers" rows="2">Content-Type: application/json</textarea>
+							</div>
+
+							<div class="form-group full-width">
+								<label for="pg-body">Request Body (JSON)</label>
+								<textarea id="pg-body" rows="4">{
+  "emailOrLdapLoginId": "",
+  "password": ""
+}</textarea>
+							</div>
+						</div>
+
+						<button id="pg-send-btn" class="primary-btn" type="submit">
+							<span>Send Request</span>
+						</button>
+					</form>
+
+					<!-- Response Output Box -->
+					<div id="pg-response-section" style="margin-top: 18px; display: none;">
+						<div class="response-meta">
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<span id="pg-resp-status" class="response-status-badge"></span>
+								<span id="pg-resp-status-text" style="font-size: 0.8rem; font-weight: 600;"></span>
+							</div>
+							<span id="pg-resp-time" class="response-time"></span>
+						</div>
+
+						<div class="form-group">
+							<label style="display: flex; justify-content: space-between; align-items: center;">
+								<span>Response Body</span>
+								<button class="secondary-btn" type="button" style="padding: 2px 8px; font-size: 0.75rem;" onclick="copyPgResponse()">Copy</button>
+							</label>
+							<pre id="pg-resp-body" class="code-block"></pre>
+						</div>
+
+						<div class="form-group" style="margin-bottom: 0;">
+							<label>Response Headers</label>
+							<pre id="pg-resp-headers" class="code-block" style="max-height: 140px; font-size: 0.775rem;"></pre>
+						</div>
+					</div>
+				</div>
+
+				<!-- Live Cookie Inspector -->
+				<div class="card">
+					<div class="cookie-box-header">
+						<span class="cookie-box-title">🍪 Document Cookies Inspector</span>
+						<div style="display: flex; gap: 6px;">
+							<button class="secondary-btn" type="button" onclick="refreshCookieInspector()">Refresh</button>
+							<button class="secondary-btn" type="button" onclick="clearAllCookies()">Clear Cookies</button>
+						</div>
+					</div>
+					<div id="cookie-list" style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+						<div class="empty-notice" style="padding: 10px;">Click "Refresh" to inspect document cookies.</div>
+					</div>
+
+					<!-- HttpOnly Explainer & Manual Token Forwarder -->
+					<div style="margin-top: 14px; padding: 12px 14px; background: rgba(255, 109, 90, 0.08); border: 1px solid rgba(255, 109, 90, 0.25); border-radius: 8px; font-size: 0.8rem; line-height: 1.5;">
+						<strong style="color: var(--accent);">Why is <code>n8n-auth</code> not in Document Cookies?</strong><br/>
+						<code>POST /rest/login</code> sets <code>n8n-auth</code> with the <strong><code>HttpOnly</code></strong> flag.
+						By browser security design, <strong>JavaScript (<code>document.cookie</code>) is blocked from reading <code>HttpOnly</code> cookies</strong>.
+						The cookie IS stored in your browser — you can see it in DevTools: <strong>F12 &gt; Application &gt; Cookies &gt; http://localhost:5678</strong>.<br/>
+						To forward it right now, copy the cookie value from DevTools and paste it below:
+						<div style="margin-top: 10px; display: flex; gap: 8px;">
+							<input id="paste-token-input" type="text" placeholder="Paste n8n-auth value from DevTools here" style="flex: 1; background: var(--code-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; outline: none;" />
+							<button class="primary-btn" type="button" style="width: auto; padding: 7px 14px; font-size: 0.8rem; white-space: nowrap;" onclick="forwardPastedToken()">Forward to /signin ➔</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- TAB 3: REDIRECT LISTENER -->
+			<div id="tab-listener" class="tab-panel">
+				<!-- Highlighted Error Code Box -->
+				<div id="message-box" class="message-box">
+					<div class="label">Redirect Error Code (?error_code)</div>
+					<div id="message-value" class="value">No redirect received yet.</div>
+					<div id="error-desc" style="margin-top: 8px; font-size: 0.85rem; color: var(--text-muted);"></div>
+				</div>
+
+				<!-- Received Query Parameters Table -->
+				<div class="card">
+					<div class="card-title">
+						<span>Received Query Parameters</span>
+						<button class="secondary-btn" type="button" onclick="clearCurrentQueryParams()">Clear URL</button>
+					</div>
+					<div class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th>Parameter</th>
+									<th>Value</th>
+								</tr>
+							</thead>
+							<tbody id="params-table-body">
+								<tr>
+									<td colspan="2" class="empty-notice">No query parameters found in current URL.</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- TAB 4: MANUAL /SIGNIN LAUNCHER -->
+			<div id="tab-manual" class="tab-panel">
+				<div class="card">
+					<div class="card-title">Simulate /signin Direct Call</div>
+					<div class="card-subtitle">
+						Manually craft a call to n8n's headless <code>/signin?t=&lt;token&gt;&amp;exp=&lt;timestamp&gt;</code> to test valid, malformed, expired, or empty tokens.
+					</div>
+
+					<div class="form-group">
+						<label for="manual-n8n-url">n8n Signin URL</label>
+						<input id="manual-n8n-url" type="text" value="http://localhost:5678/signin" />
+					</div>
+
+					<div class="form-group">
+						<label for="manual-token-input">JWT Token (?t=)</label>
+						<input id="manual-token-input" type="text" placeholder="Paste JWT token or leave empty to test missing token" />
+					</div>
+
+					<div class="form-group">
+						<label for="manual-exp-input">Expiration Timestamp (?exp=)</label>
+						<input id="manual-exp-input" type="text" placeholder="Unix timestamp in seconds (optional, defaults to +24h)" />
+					</div>
+
+					<button id="manual-test-btn" class="primary-btn" type="button" onclick="handleManualSignin()">
+						Trigger /signin
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Strict coding rule: Zero OR operators used.
+
+		const errorDescriptions = {
+			'MISSING_TOKEN': 'No token was provided in the query string (?t= is missing).',
+			'EMPTY_TOKEN': 'The "t" parameter was provided but is empty (?t=).',
+			'WRONG_PARAMETER_NAME': 'Token was passed with a wrong parameter name (e.g. ?token= or ?v= instead of ?t=).',
+			'MALFORMED_TOKEN': 'The token is not a valid 3-part JWT or payload cannot be parsed.',
+			'TOKEN_EXPIRED': 'The JWT token "exp" timestamp is in the past.',
+			'TOKEN_NOT_ACTIVE': 'The JWT token "nbf" timestamp is in the future.',
+			'INVALID_PAYLOAD': 'The JWT payload is missing the required user "id" field.',
+			'MISSING_COOKIE_CONFIG': 'VITE_AUTH_COOKIE_NAME environment variable is not defined.',
+			'BACKEND_UNAUTHORIZED': 'Server returned HTTP 401: Token signature mismatch, user not found in DB, password/email changed, or session revoked.',
+			'BACKEND_FORBIDDEN': 'Server returned HTTP 403: User quota reached or access is forbidden.',
+			'USER_NOT_FOUND': 'Server returned HTTP 404: User referenced in token does not exist.',
+			'SERVER_ERROR': 'Server returned HTTP 500: An internal backend error occurred.',
+			'CONNECTION_ERROR': 'Cannot connect to n8n backend API.',
+			'AUTH_FAILED': 'Authentication verification failed.'
+		};
+
+		// Tab switching logic
+		function switchTab(tabName) {
+			const tabs = ['login', 'playground', 'listener', 'manual'];
+			for (let i = 0; i < tabs.length; i += 1) {
+				const name = tabs[i];
+				const btn = document.getElementById('tab-btn-' + name);
+				const panel = document.getElementById('tab-' + name);
+				if (name === tabName) {
+					btn.classList.add('active');
+					panel.classList.add('active');
+				} else {
+					btn.classList.remove('active');
+					panel.classList.remove('active');
+				}
+			}
+			if (tabName === 'playground') {
+				refreshCookieInspector();
+			}
+		}
+
+		// Helper: Safe cookie extractor
+		function getCookieValue(cookieName) {
+			const prefix = cookieName + '=';
+			const rawCookies = document.cookie.split(';');
+			for (let i = 0; i < rawCookies.length; i += 1) {
+				const item = rawCookies[i].trim();
+				if (item.startsWith(prefix)) {
+					return decodeURIComponent(item.substring(prefix.length));
+				}
+			}
+			return '';
+		}
+
+		// Helper: Parse JWT payload safely
+		function parseJwtPayload(token) {
+			if (!token) {
+				return null;
+			}
+			const parts = token.split('.');
+			if (parts.length !== 3) {
+				return null;
+			}
+			try {
+				const base64Url = parts[1];
+				const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+				const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+				const decoded = atob(padded);
+				return JSON.parse(decoded);
+			} catch (e) {
+				return null;
+			}
+		}
+
+		// Helper: Escape HTML
+		function escapeHtml(str) {
+			if (!str) {
+				return '';
+			}
+			return String(str)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#039;');
+		}
+
+		// Status box display
+		function setLoginStatus(msg, type, details) {
+			const box = document.getElementById('login-status');
+			const msgEl = document.getElementById('login-status-msg');
+			const detailsEl = document.getElementById('login-token-details');
+
+			box.className = 'status-box ' + type;
+			msgEl.innerHTML = msg;
+
+			if (details) {
+				detailsEl.style.display = 'flex';
+				document.getElementById('login-display-token').textContent = details.token;
+				document.getElementById('login-display-exp').textContent = details.exp;
+				document.getElementById('login-display-exp-date').textContent = details.expDate;
+				document.getElementById('login-display-destination').textContent = details.destination;
+
+				const manualBtn = document.getElementById('login-manual-forward-btn');
+				manualBtn.onclick = function() {
+					window.location.href = details.destination;
+				};
+			} else {
+				detailsEl.style.display = 'none';
+			}
+		}
+
+		// LOGIN HANDLER
+		async function handleLoginSubmit() {
+			const baseUrlInput = document.getElementById('login-base-url').value.trim();
+			const email = document.getElementById('login-email').value.trim();
+			const password = document.getElementById('login-password').value;
+			const cookieNameInput = document.getElementById('login-cookie-name').value.trim();
+			const cookieName = cookieNameInput ? cookieNameInput : 'n8n-auth';
+			const forwardMode = document.getElementById('login-forward-mode').value;
+			const includeCreds = document.getElementById('login-credentials-checkbox').checked;
+
+			const submitBtn = document.getElementById('login-submit-btn');
+			submitBtn.disabled = true;
+
+			const cleanBaseUrl = baseUrlInput.replace(/\/+$/, '');
+			const endpoint = cleanBaseUrl + '/rest/login';
+
+			setLoginStatus('Connecting to <code>' + escapeHtml(endpoint) + '</code>...', 'info', null);
+
+			try {
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+					},
+					credentials: includeCreds ? 'include' : 'same-origin',
+					body: JSON.stringify({
+						emailOrLdapLoginId: email,
+						password: password
+					})
+				});
+
+				let data = null;
+				try {
+					data = await response.json();
+				} catch (jsonErr) {
+					// response was not JSON
+				}
+
+				if (!response.ok) {
+					let errorMsg = 'HTTP ' + response.status + ' ' + response.statusText;
+					if (data) {
+						if (data.message) {
+							errorMsg = errorMsg + ': ' + data.message;
+						} else if (data.error) {
+							errorMsg = errorMsg + ': ' + data.error;
+						}
+					}
+					setLoginStatus('<strong>Login Failed:</strong> ' + escapeHtml(errorMsg), 'error', null);
+					submitBtn.disabled = false;
+					return;
+				}
+
+				// Extract token from multiple possible sources
+				let token = '';
+
+				// 1. From response body JSON (data.data.token or data.token)
+				if (data) {
+					if (data.data && typeof data.data.token === 'string' && data.data.token) {
+						token = data.data.token;
+					} else if (typeof data.token === 'string' && data.token) {
+						token = data.token;
+					}
+				}
+
+				// 2. From response headers (auth-token)
+				if (!token) {
+					const headerToken = response.headers.get('auth-token');
+					if (headerToken) {
+						token = headerToken;
+					}
+				}
+
+				// 3. From document.cookie
+				if (!token) {
+					const fromCookie = getCookieValue(cookieName);
+					if (fromCookie) {
+						token = fromCookie;
+					}
+				}
+
+				// 4. From any cookie matching n8n-auth
+				if (!token) {
+					const fallbackCookie = getCookieValue('n8n-auth');
+					if (fallbackCookie) {
+						token = fallbackCookie;
+					}
+				}
+
+				if (!token) {
+					setLoginStatus(
+						'<strong>Login Succeeded (HTTP 200)</strong>, but the browser could not read the <code>' + escapeHtml(cookieName) + '</code> token.<br/>' +
+						'<span style="font-size: 0.8rem; color: var(--text-muted);">' +
+						'This typically happens when n8n returns an <code>HttpOnly</code> cookie across a different origin. Check Application &gt; Cookies in DevTools.' +
+						'</span>',
+						'error',
+						null
+					);
+					submitBtn.disabled = false;
+					return;
+				}
+
+				// Extract exp timestamp
+				let exp = '';
+				const jwtPayload = parseJwtPayload(token);
+				if (jwtPayload && typeof jwtPayload.exp === 'number') {
+					exp = String(jwtPayload.exp);
+				}
+				if (!exp) {
+					exp = String(Math.floor(Date.now() / 1000) + 86400);
+				}
+
+				let expDateStr = '';
+				const numExp = Number(exp);
+				if (!isNaN(numExp)) {
+					const dateObj = new Date(numExp < 1e11 ? numExp * 1000 : numExp);
+					expDateStr = '(' + dateObj.toLocaleString() + ')';
+				}
+
+				const targetUrl = new URL(cleanBaseUrl + '/signin');
+				targetUrl.searchParams.set('t', token);
+				targetUrl.searchParams.set('exp', exp);
+				const destinationUrl = targetUrl.toString();
+
+				const details = {
+					token: token.substring(0, 36) + '...',
+					exp: exp,
+					expDate: expDateStr,
+					destination: destinationUrl
+				};
+
+				if (forwardMode === 'auto') {
+					setLoginStatus('<strong>Success!</strong> Token retrieved. Forwarding to <code>/signin</code> in 1 second...', 'success', details);
+					setTimeout(function() {
+						window.location.href = destinationUrl;
+					}, 1000);
+				} else {
+					setLoginStatus('<strong>Success!</strong> Token retrieved successfully. Click below to forward to <code>/signin</code>.', 'success', details);
+					submitBtn.disabled = false;
+				}
+
+			} catch (err) {
+				setLoginStatus('<strong>Network Error:</strong> ' + escapeHtml(err.message), 'error', null);
+				submitBtn.disabled = false;
+			}
+		}
+
+		// API PLAYGROUND HANDLERS
+		function loadPreset(presetKey) {
+			const baseUrlInput = document.getElementById('login-base-url').value.trim();
+			const cleanBaseUrl = baseUrlInput ? baseUrlInput.replace(/\/+$/, '') : 'http://localhost:5678';
+
+			const methodEl = document.getElementById('pg-method');
+			const urlEl = document.getElementById('pg-url');
+			const headersEl = document.getElementById('pg-headers');
+			const bodyEl = document.getElementById('pg-body');
+
+			if (presetKey === 'login-post') {
+				methodEl.value = 'POST';
+				urlEl.value = cleanBaseUrl + '/rest/login';
+				headersEl.value = 'Content-Type: application/json';
+				bodyEl.value = JSON.stringify({
+					emailOrLdapLoginId: document.getElementById('login-email').value.trim(),
+					password: document.getElementById('login-password').value
+				}, null, 2);
+			} else if (presetKey === 'login-get') {
+				methodEl.value = 'GET';
+				urlEl.value = cleanBaseUrl + '/rest/login';
+				headersEl.value = 'Accept: application/json';
+				bodyEl.value = '';
+			} else if (presetKey === 'users-get') {
+				methodEl.value = 'GET';
+				urlEl.value = cleanBaseUrl + '/rest/users';
+				headersEl.value = 'Accept: application/json';
+				bodyEl.value = '';
+			} else if (presetKey === 'logout-post') {
+				methodEl.value = 'POST';
+				urlEl.value = cleanBaseUrl + '/rest/logout';
+				headersEl.value = 'Content-Type: application/json';
+				bodyEl.value = '{}';
+			}
+		}
+
+		async function handlePlaygroundSubmit() {
+			const method = document.getElementById('pg-method').value;
+			const url = document.getElementById('pg-url').value.trim();
+			const credsMode = document.getElementById('pg-credentials').value;
+			const rawHeaders = document.getElementById('pg-headers').value;
+			const rawBody = document.getElementById('pg-body').value.trim();
+
+			const sendBtn = document.getElementById('pg-send-btn');
+			sendBtn.disabled = true;
+
+			const section = document.getElementById('pg-response-section');
+			const statusEl = document.getElementById('pg-resp-status');
+			const statusTextEl = document.getElementById('pg-resp-status-text');
+			const timeEl = document.getElementById('pg-resp-time');
+			const bodyEl = document.getElementById('pg-resp-body');
+			const headersEl = document.getElementById('pg-resp-headers');
+
+			section.style.display = 'block';
+			statusEl.textContent = '...';
+			statusEl.style.background = 'rgba(148, 163, 184, 0.2)';
+			statusEl.style.color = 'var(--text-muted)';
+			statusTextEl.textContent = 'Sending...';
+			timeEl.textContent = '';
+			bodyEl.textContent = 'Loading response...';
+			headersEl.textContent = '';
+
+			// Parse headers
+			const headers = {};
+			if (rawHeaders) {
+				const lines = rawHeaders.split('\n');
+				for (let i = 0; i < lines.length; i += 1) {
+					const line = lines[i].trim();
+					if (line) {
+						const colonIdx = line.indexOf(':');
+						if (colonIdx !== -1) {
+							const k = line.substring(0, colonIdx).trim();
+							const v = line.substring(colonIdx + 1).trim();
+							headers[k] = v;
+						}
+					}
+				}
+			}
+
+			const options = {
+				method: method,
+				headers: headers,
+				credentials: credsMode
+			};
+
+			if (method !== 'GET' && method !== 'HEAD') {
+				if (rawBody) {
+					options.body = rawBody;
+				}
+			}
+
+			const startTime = performance.now();
+
+			try {
+				const response = await fetch(url, options);
+				const duration = Math.round(performance.now() - startTime);
+
+				statusEl.textContent = response.status;
+				statusTextEl.textContent = response.statusText;
+				timeEl.textContent = duration + ' ms';
+
+				if (response.ok) {
+					statusEl.style.background = 'var(--success-bg)';
+					statusEl.style.color = 'var(--success-text)';
+				} else {
+					statusEl.style.background = 'var(--error-bg)';
+					statusEl.style.color = 'var(--error-text)';
+				}
+
+				// Display response headers
+				let headersText = '';
+				response.headers.forEach(function(value, key) {
+					headersText = headersText + key + ': ' + value + '\n';
+				});
+				headersEl.textContent = headersText ? headersText : '(No response headers exposed)';
+
+				// Display response body
+				const text = await response.text();
+				try {
+					const parsed = JSON.parse(text);
+					bodyEl.textContent = JSON.stringify(parsed, null, 2);
+				} catch (e) {
+					bodyEl.textContent = text ? text : '(Empty response body)';
+				}
+
+				refreshCookieInspector();
+			} catch (err) {
+				const duration = Math.round(performance.now() - startTime);
+				statusEl.textContent = 'ERR';
+				statusEl.style.background = 'var(--error-bg)';
+				statusEl.style.color = 'var(--error-text)';
+				statusTextEl.textContent = 'Fetch Failed';
+				timeEl.textContent = duration + ' ms';
+				bodyEl.textContent = 'Error: ' + err.message;
+				headersEl.textContent = '(None)';
+			}
+
+			sendBtn.disabled = false;
+		}
+
+		function copyPgResponse() {
+			const text = document.getElementById('pg-resp-body').textContent;
+			if (navigator.clipboard) {
+				navigator.clipboard.writeText(text);
+			}
+		}
+
+		// COOKIE INSPECTOR
+		function refreshCookieInspector() {
+			const listEl = document.getElementById('cookie-list');
+			const raw = document.cookie;
+			if (!raw) {
+				listEl.innerHTML = '<div class="empty-notice" style="padding: 10px;">No accessible document cookies found on this origin.</div>';
+				return;
+			}
+			if (raw.trim() === '') {
+				listEl.innerHTML = '<div class="empty-notice" style="padding: 10px;">No accessible document cookies found on this origin.</div>';
+				return;
+			}
+
+			const cookies = raw.split(';');
+			listEl.innerHTML = '';
+
+			for (let i = 0; i < cookies.length; i += 1) {
+				const cookie = cookies[i].trim();
+				const eqIdx = cookie.indexOf('=');
+				let key = cookie;
+				let val = '';
+				if (eqIdx !== -1) {
+					key = cookie.substring(0, eqIdx);
+					val = cookie.substring(eqIdx + 1);
+				}
+
+				const isAuth = (key === 'n8n-auth');
+				const item = document.createElement('div');
+				item.className = 'cookie-item' + (isAuth ? ' auth' : '');
+
+				const left = document.createElement('div');
+				left.innerHTML = '<strong>' + escapeHtml(key) + '</strong>: <span style="color: var(--text-muted);">' + escapeHtml(val.substring(0, 40)) + (val.length > 40 ? '...' : '') + '</span>';
+
+				const right = document.createElement('div');
+				right.style.display = 'flex';
+				right.style.gap = '4px';
+
+				if (isAuth) {
+					const forwardBtn = document.createElement('button');
+					forwardBtn.className = 'secondary-btn';
+					forwardBtn.style.padding = '2px 6px';
+					forwardBtn.style.fontSize = '0.75rem';
+					forwardBtn.style.color = 'var(--accent)';
+					forwardBtn.textContent = 'Forward to /signin';
+					forwardBtn.onclick = function() {
+						const baseUrlInput = document.getElementById('login-base-url').value.trim();
+						const cleanBaseUrl = baseUrlInput ? baseUrlInput.replace(/\/+$/, '') : 'http://localhost:5678';
+						let exp = '';
+						const payload = parseJwtPayload(val);
+						if (payload && typeof payload.exp === 'number') {
+							exp = String(payload.exp);
+						}
+						if (!exp) {
+							exp = String(Math.floor(Date.now() / 1000) + 86400);
+						}
+						window.location.href = cleanBaseUrl + '/signin?t=' + encodeURIComponent(val) + '&exp=' + encodeURIComponent(exp);
+					};
+					right.appendChild(forwardBtn);
+				}
+
+				item.appendChild(left);
+				item.appendChild(right);
+				listEl.appendChild(item);
+			}
+		}
+
+		function clearAllCookies() {
+			const raw = document.cookie.split(';');
+			for (let i = 0; i < raw.length; i += 1) {
+				const cookie = raw[i].trim();
+				const eqIdx = cookie.indexOf('=');
+				const name = eqIdx !== -1 ? cookie.substring(0, eqIdx) : cookie;
+				document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+			}
+			refreshCookieInspector();
+		}
+
+		function forwardPastedToken() {
+			const input = document.getElementById('paste-token-input');
+			const token = input ? input.value.trim() : '';
+			if (!token) {
+				alert('Please paste a valid n8n-auth token first.');
+				return;
+			}
+			const baseUrlInput = document.getElementById('login-base-url').value.trim();
+			const cleanBaseUrl = baseUrlInput ? baseUrlInput.replace(/\/+$/, '') : 'http://localhost:5678';
+			let exp = '';
+			const payload = parseJwtPayload(token);
+			if (payload && typeof payload.exp === 'number') {
+				exp = String(payload.exp);
+			}
+			if (!exp) {
+				exp = String(Math.floor(Date.now() / 1000) + 86400);
+			}
+			window.location.href = cleanBaseUrl + '/signin?t=' + encodeURIComponent(token) + '&exp=' + encodeURIComponent(exp);
+		}
+
+		// MANUAL /SIGNIN HANDLER
+		function handleManualSignin() {
+			const baseUrl = document.getElementById('manual-n8n-url').value.trim();
+			const token = document.getElementById('manual-token-input').value.trim();
+			const expInput = document.getElementById('manual-exp-input').value.trim();
+
+			const url = new URL(baseUrl);
+			if (token) {
+				url.searchParams.set('t', token);
+				let exp = expInput;
+				if (!exp) {
+					const jwt = parseJwtPayload(token);
+					if (jwt && typeof jwt.exp === 'number') {
+						exp = String(jwt.exp);
+					}
+				}
+				if (!exp) {
+					exp = String(Math.floor(Date.now() / 1000) + 86400);
+				}
+				url.searchParams.set('exp', exp);
+			}
+			window.location.href = url.toString();
+		}
+
+		function clearCurrentQueryParams() {
+			window.location.href = window.location.pathname;
+		}
+
+		// INITIALIZATION ON PAGE LOAD
+		window.addEventListener('DOMContentLoaded', function() {
+			const params = new URLSearchParams(window.location.search);
+			const fromUrl = params.get('from');
+			const errorCode = params.get('error_code');
+			const message = params.get('m');
+			const badge = document.getElementById('status-badge');
+			const messageBox = document.getElementById('message-box');
+			const messageValue = document.getElementById('message-value');
+			const errorDesc = document.getElementById('error-desc');
+			const tableBody = document.getElementById('params-table-body');
+
+			if (errorCode) {
+				badge.textContent = 'Error: ' + errorCode;
+				badge.className = 'badge error';
+				messageBox.classList.add('has-message');
+				messageValue.innerHTML = '<code style="font-size: 1.1rem; color: #f87171; font-weight: 700;">' + escapeHtml(errorCode) + '</code>';
+				let extraInfo = errorDescriptions[errorCode] ? errorDescriptions[errorCode] : '';
+				if (fromUrl) {
+					extraInfo = extraInfo + '<div style="margin-top: 8px; color: var(--accent-blue);"><strong>Redirected from origin:</strong> <code>' + escapeHtml(fromUrl) + '</code></div>';
+				}
+				errorDesc.innerHTML = extraInfo;
+				switchTab('listener');
+			} else if (message) {
+				badge.textContent = 'Message Received';
+				badge.className = 'badge error';
+				messageBox.classList.add('has-message');
+				messageValue.textContent = decodeURIComponent(message);
+				if (fromUrl) {
+					errorDesc.innerHTML = '<div style="margin-top: 8px; color: var(--accent-blue);"><strong>Redirected from origin:</strong> <code>' + escapeHtml(fromUrl) + '</code></div>';
+				}
+				switchTab('listener');
+			}
+
+			const entries = Array.from(params.entries());
+			if (entries.length > 0) {
+				tableBody.innerHTML = '';
+				for (let i = 0; i < entries.length; i += 1) {
+					const key = entries[i][0];
+					const val = entries[i][1];
+					const row = document.createElement('tr');
+					const keyCell = document.createElement('td');
+					keyCell.innerHTML = '<code>' + escapeHtml(key) + '</code>';
+					const valCell = document.createElement('td');
+					valCell.textContent = val;
+					row.appendChild(keyCell);
+					row.appendChild(valCell);
+					tableBody.appendChild(row);
+				}
+			}
+		});
+	</script>
+</body>
+</html>

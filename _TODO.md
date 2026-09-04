@@ -58,6 +58,10 @@ ower way only way is to use ssh and insital the automating script and calling it
 we can do by just creating at beging of the docker create admin and api first and create memeber then done we use that to create login credentials for them so on click to move to panel we pass that tokn at the url /signin?token=[token] the login page only shows loading not any login form then move them to dashboar on login success done
 
 
+---
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJhNmJhMmU2LWE5OTctNDFlYi05ZDY5LTlkMjUwYTM3OThiNiIsImhhc2giOiI5T1JNVW9hMnpMIiwidXNlZE1mYSI6ZmFsc2UsImlhdCI6MTc4ODQ1ODEzMiwiZXhwIjoxNzg5MDYyOTMyfQ.9ya-AzbKLy5WGsh-7CZdtvqJ5IluW-IZJpgilshFat0
+---
+
 ### setuping owner
 POST http://localhost:5678/rest/owner/setup
 body {

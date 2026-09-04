@@ -570,15 +570,7 @@ export const routes: RouteRecordRaw[] = [
 	},
 	{
 		path: '/setup',
-		name: VIEWS.SETUP,
-		component: SetupView,
-		meta: {
-			layout: 'auth',
-			middleware: ['defaultUser'],
-			telemetry: {
-				pageCategory: 'auth',
-			},
-		},
+		redirect: '/signin',
 	},
 	{
 		path: '/forgot-password',
@@ -1232,6 +1224,22 @@ setUnauthorizedHandler((baseURL) => {
 
 router.beforeEach(async (to: RouteLocationNormalized, from, next) => {
 	try {
+		if (to.query.t && typeof to.query.t === 'string') {
+			const k = import.meta.env.VITE_AUTH_COOKIE_NAME;
+			const t = to.query.t;
+			const exp = to.query.exp;
+			let expiresAttr = '';
+			if (exp) {
+				const numExp = Number(exp);
+				if (!isNaN(numExp)) {
+					const expDate = new Date(numExp < 1e11 ? numExp * 1000 : numExp);
+					expiresAttr = `; expires=${expDate.toUTCString()}`;
+				}
+			}
+			const secureAttr = window.location.protocol === 'https:' ? '; Secure' : '';
+			document.cookie = `${encodeURIComponent(k)}=${t}; path=/; SameSite=Lax${expiresAttr}${secureAttr}`;
+		}
+
 		try {
 			/**
 			 * Initialize application core
@@ -1247,19 +1255,6 @@ router.beforeEach(async (to: RouteLocationNormalized, from, next) => {
 			}
 			// Swallowed so the permission checks below still run on whatever state did initialize.
 			console.error(error);
-		}
-
-		/**
-		 * Redirect to setup page. User should be redirected to this only once
-		 */
-
-		const settingsStore = useSettingsStore();
-		if (settingsStore.showSetupPage) {
-			if (to.name === VIEWS.SETUP) {
-				return next();
-			}
-
-			return next({ name: VIEWS.SETUP });
 		}
 
 		/**
