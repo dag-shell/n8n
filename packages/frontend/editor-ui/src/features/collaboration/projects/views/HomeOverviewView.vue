@@ -1,26 +1,73 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from '@n8n/i18n';
 import { useDocumentTitle } from '@/app/composables/useDocumentTitle';
 import PageViewLayout from '@/app/components/layouts/PageViewLayout.vue';
 import ProjectHeader from '@/features/collaboration/projects/components/ProjectHeader.vue';
-import { InsightsSummary, useInsightsStore } from '@/features/execution/insights';
+import { useInsightsStore } from '@/features/execution/insights';
 import { useWorkflowsListStore } from '@/app/stores/workflowsList.store';
 import { useCredentialsStore } from '@/features/credentials/credentials.store';
 import { useDataTableStore } from '@/features/core/dataTable/dataTable.store';
 import { useEnvironmentsStore } from '@/features/settings/environments.ee/environments.store';
 import { useProjectsStore } from '@/features/collaboration/projects/projects.store';
 import { useUIStore } from '@/app/stores/ui.store';
+import { useRootStore } from '@n8n/stores/useRootStore';
+import { makeRestApiRequest } from '@n8n/rest-api-client';
 import { VIEWS } from '@/app/constants';
 import { DATA_TABLE_VIEW, ADD_DATA_TABLE_MODAL_KEY } from '@/features/core/dataTable/constants';
 import type { IWorkflowDb } from '@/Interface';
 import { formatTimeAgo } from '@/app/utils/formatters/dateFormatter';
 import { N8nButton, N8nHeading, N8nIcon, N8nLoading, N8nTag, N8nText } from '@n8n/design-system';
 
+interface HostMetrics {
+	cpu: {
+		cores: number;
+		model: string;
+		loadAverage: number[];
+		usagePercent: number;
+	};
+	memory: {
+		total: number;
+		used: number;
+		free: number;
+		usagePercent: number;
+		totalFormatted: string;
+		usedFormatted: string;
+		freeFormatted: string;
+	};
+	storage: {
+		total: number;
+		used: number;
+		available: number;
+		usagePercent: number;
+		totalFormatted: string;
+		usedFormatted: string;
+		availableFormatted: string;
+	};
+	network: {
+		rxBytes: number;
+		txBytes: number;
+		rxFormatted: string;
+		txFormatted: string;
+		rxSecFormatted?: string;
+		txSecFormatted?: string;
+	};
+	system: {
+		hostname: string;
+		platform: string;
+		arch: string;
+		release: string;
+		uptime: number;
+		nodeVersion: string;
+	};
+	timestamp: number;
+}
+
 const router = useRouter();
 const i18n = useI18n();
 const documentTitle = useDocumentTitle();
+const rootStore = useRootStore();
 
 const insightsStore = useInsightsStore();
 const workflowsListStore = useWorkflowsListStore();
@@ -31,6 +78,70 @@ const projectsStore = useProjectsStore();
 const uiStore = useUIStore();
 
 const loading = ref(true);
+
+// Host metrics state
+const hostMetrics = ref<HostMetrics | null>(null);
+const hostMetricsLoading = ref(true);
+const hostMetricsError = ref<string | null>(null);
+let prevRxBytes = 0;
+let prevTxBytes = 0;
+const networkRxRate = ref('0 B/s');
+const networkTxRate = ref('0 B/s');
+const POLL_INTERVAL = 5000;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+function formatBytes(bytes: number): string {
+	if (!bytes || isNaN(bytes) || bytes <= 0) return '0 B';
+	const k = 1024;
+	const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+	const idx = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+	return `${parseFloat((bytes / Math.pow(k, idx)).toFixed(1))} ${sizes[idx]}`;
+}
+
+function getProgressColor(percent: number): string {
+	if (percent >= 90) return 'var(--color--danger)';
+	if (percent >= 70) return 'var(--color--warning)';
+	return 'var(--color--success)';
+}
+
+async function fetchHostMetrics() {
+	try {
+		const raw = await makeRestApiRequest<{ data?: HostMetrics } & HostMetrics>(
+			rootStore.restApiContext,
+			'GET',
+			'/host-metrics',
+		);
+		const payload = raw.data ?? raw;
+		hostMetrics.value = payload;
+		hostMetricsError.value = null;
+
+		if (
+			payload.network?.rxSecFormatted &&
+			payload.network?.txSecFormatted &&
+			(payload.network.rxSecFormatted !== '0 B/s' || payload.network.txSecFormatted !== '0 B/s')
+		) {
+			networkRxRate.value = payload.network.rxSecFormatted;
+			networkTxRate.value = payload.network.txSecFormatted;
+		} else if (prevRxBytes > 0 && payload.network) {
+			const rxDelta = payload.network.rxBytes - prevRxBytes;
+			const txDelta = payload.network.txBytes - prevTxBytes;
+			const rateDivisor = POLL_INTERVAL / 1000;
+			networkRxRate.value = `${formatBytes(Math.max(0, rxDelta) / rateDivisor)}/s`;
+			networkTxRate.value = `${formatBytes(Math.max(0, txDelta) / rateDivisor)}/s`;
+		} else if (payload.network?.rxSecFormatted && payload.network?.txSecFormatted) {
+			networkRxRate.value = payload.network.rxSecFormatted;
+			networkTxRate.value = payload.network.txSecFormatted;
+		}
+		if (payload.network) {
+			prevRxBytes = payload.network.rxBytes;
+			prevTxBytes = payload.network.txBytes;
+		}
+	} catch (e) {
+		hostMetricsError.value = e instanceof Error ? e.message : 'Failed to fetch host metrics';
+	} finally {
+		hostMetricsLoading.value = false;
+	}
+}
 
 const totalWorkflows = computed(() => workflowsListStore.totalWorkflowCount);
 const activeWorkflows = computed(
@@ -101,6 +212,11 @@ function createNewDataTable() {
 onMounted(async () => {
 	documentTitle.set(i18n.baseText('projects.menu.overview'));
 
+	void fetchHostMetrics();
+	pollTimer = setInterval(() => {
+		void fetchHostMetrics();
+	}, POLL_INTERVAL);
+
 	loading.value = true;
 	try {
 		await Promise.allSettled([
@@ -114,6 +230,13 @@ onMounted(async () => {
 		loading.value = false;
 	}
 });
+
+onUnmounted(() => {
+	if (pollTimer) {
+		clearInterval(pollTimer);
+		pollTimer = null;
+	}
+});
 </script>
 
 <template>
@@ -123,17 +246,179 @@ onMounted(async () => {
 		</template>
 
 		<div :class="$style.overviewContainer">
-			<!-- Insights Weekly Summary Banner -->
-			<section v-if="insightsStore.isSummaryEnabled" :class="$style.section">
-				<div :class="$style.sectionHeader">
-					<N8nHeading bold tag="h3" size="medium"> Execution Metrics (Last 7 Days) </N8nHeading>
+			<!-- Host System Metrics Section -->
+			<section :class="$style.section">
+				<div :class="$style.metricsGrid">
+					<!-- CPU Card -->
+					<div :class="$style.metricCard">
+						<div :class="$style.metricHeader">
+							<div :class="[$style.metricIconWrap, $style.iconCpu]">
+								<N8nIcon icon="microchip" size="medium" />
+							</div>
+							<div :class="$style.metricTitle">
+								<N8nText bold size="small">CPU</N8nText>
+							</div>
+						</div>
+						<div :class="$style.metricBody">
+							<N8nLoading
+								v-if="hostMetricsLoading"
+								:loading="hostMetricsLoading"
+								:rows="1"
+								variant="p"
+							/>
+							<template v-else-if="hostMetrics">
+								<div :class="$style.metricValue">{{ hostMetrics.cpu.usagePercent }}%</div>
+								<div :class="$style.progressBar">
+									<div
+										:class="$style.progressFill"
+										:style="{
+											width: `${hostMetrics.cpu.usagePercent}%`,
+											backgroundColor: getProgressColor(hostMetrics.cpu.usagePercent),
+										}"
+									/>
+								</div>
+								<div :class="$style.metricDetails">
+									<N8nText size="xsmall" color="text-light">
+										{{ hostMetrics.cpu.cores }} cores
+									</N8nText>
+									<N8nText size="xsmall" color="text-light">
+										Load: {{ hostMetrics.cpu.loadAverage[0].toFixed(2) }}
+									</N8nText>
+								</div>
+							</template>
+						</div>
+					</div>
+
+					<!-- Memory Card -->
+					<div :class="$style.metricCard">
+						<div :class="$style.metricHeader">
+							<div :class="[$style.metricIconWrap, $style.iconMemory]">
+								<N8nIcon icon="memory-stick" size="medium" />
+							</div>
+							<div :class="$style.metricTitle">
+								<N8nText bold size="small">Memory</N8nText>
+							</div>
+						</div>
+						<div :class="$style.metricBody">
+							<N8nLoading
+								v-if="hostMetricsLoading"
+								:loading="hostMetricsLoading"
+								:rows="1"
+								variant="p"
+							/>
+							<template v-else-if="hostMetrics">
+								<div :class="$style.metricValue">{{ hostMetrics.memory.usagePercent }}%</div>
+								<div :class="$style.progressBar">
+									<div
+										:class="$style.progressFill"
+										:style="{
+											width: `${hostMetrics.memory.usagePercent}%`,
+											backgroundColor: getProgressColor(hostMetrics.memory.usagePercent),
+										}"
+									/>
+								</div>
+								<div :class="$style.metricDetails">
+									<N8nText size="xsmall" color="text-light">
+										{{ hostMetrics.memory.usedFormatted }} / {{ hostMetrics.memory.totalFormatted }}
+									</N8nText>
+									<N8nText size="xsmall" color="text-light">
+										{{ hostMetrics.memory.freeFormatted }} free
+									</N8nText>
+								</div>
+							</template>
+						</div>
+					</div>
+
+					<!-- Storage Card -->
+					<div :class="$style.metricCard">
+						<div :class="$style.metricHeader">
+							<div :class="[$style.metricIconWrap, $style.iconStorage]">
+								<N8nIcon icon="hard-drive" size="medium" />
+							</div>
+							<div :class="$style.metricTitle">
+								<N8nText bold size="small">Storage</N8nText>
+							</div>
+						</div>
+						<div :class="$style.metricBody">
+							<N8nLoading
+								v-if="hostMetricsLoading"
+								:loading="hostMetricsLoading"
+								:rows="1"
+								variant="p"
+							/>
+							<template v-else-if="hostMetrics">
+								<div :class="$style.metricValue">{{ hostMetrics.storage.usagePercent }}%</div>
+								<div :class="$style.progressBar">
+									<div
+										:class="$style.progressFill"
+										:style="{
+											width: `${hostMetrics.storage.usagePercent}%`,
+											backgroundColor: getProgressColor(hostMetrics.storage.usagePercent),
+										}"
+									/>
+								</div>
+								<div :class="$style.metricDetails">
+									<N8nText size="xsmall" color="text-light">
+										{{ hostMetrics.storage.usedFormatted }} /
+										{{ hostMetrics.storage.totalFormatted }}
+									</N8nText>
+									<N8nText size="xsmall" color="text-light">
+										{{ hostMetrics.storage.availableFormatted }} free
+									</N8nText>
+								</div>
+							</template>
+						</div>
+					</div>
+
+					<!-- Network Card -->
+					<div :class="$style.metricCard">
+						<div :class="$style.metricHeader">
+							<div :class="[$style.metricIconWrap, $style.iconNetwork]">
+								<N8nIcon icon="wifi" size="medium" />
+							</div>
+							<div :class="$style.metricTitle">
+								<N8nText bold size="small">Network</N8nText>
+							</div>
+						</div>
+						<div :class="$style.metricBody">
+							<N8nLoading
+								v-if="hostMetricsLoading"
+								:loading="hostMetricsLoading"
+								:rows="1"
+								variant="p"
+							/>
+							<template v-else-if="hostMetrics">
+								<div :class="$style.networkStats">
+									<div :class="$style.networkRow">
+										<div :class="$style.networkDirection">
+											<N8nIcon icon="arrow-down" size="small" :class="$style.downloadIcon" />
+											<N8nText size="xsmall" color="text-light">Download</N8nText>
+										</div>
+										<div :class="$style.networkValue">
+											<N8nText bold size="small">{{ networkRxRate }}</N8nText>
+											<N8nText size="xsmall" color="text-light">
+												Total: {{ hostMetrics.network.rxFormatted }}
+											</N8nText>
+										</div>
+									</div>
+									<div :class="$style.networkDivider" />
+									<div :class="$style.networkRow">
+										<div :class="$style.networkDirection">
+											<N8nIcon icon="arrow-up" size="small" :class="$style.uploadIcon" />
+											<N8nText size="xsmall" color="text-light">Upload</N8nText>
+										</div>
+										<div :class="$style.networkValue">
+											<N8nText bold size="small">{{ networkTxRate }}</N8nText>
+											<N8nText size="xsmall" color="text-light">
+												Total: {{ hostMetrics.network.txFormatted }}
+											</N8nText>
+										</div>
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
 				</div>
-				<InsightsSummary
-					:loading="insightsLoading"
-					:summary="insightsData"
-					time-range="week"
-					:class="$style.insightsBanner"
-				/>
 			</section>
 
 			<!-- Quick KPI Status Cards -->
@@ -429,8 +714,149 @@ onMounted(async () => {
 	justify-content: space-between;
 }
 
-.insightsBanner {
-	margin-bottom: 0 !important;
+/* Host Metrics Section */
+.metricsGrid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: var(--spacing--md);
+
+	@include mixins.breakpoint('md-and-down') {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	@include mixins.breakpoint('xs-only') {
+		grid-template-columns: 1fr;
+	}
+}
+
+.metricCard {
+	display: flex;
+	flex-direction: column;
+	padding: var(--spacing--md);
+	background-color: var(--color--background--light-2);
+	border: var(--border);
+	border-radius: var(--border-radius--base);
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+
+	&:hover {
+		border-color: var(--color--primary);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+	}
+}
+
+.metricHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--xs);
+	margin-bottom: var(--spacing--sm);
+}
+
+.metricIconWrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--border-radius--base);
+	flex-shrink: 0;
+}
+
+.iconCpu {
+	background-color: rgba(255, 110, 74, 0.12);
+	color: var(--color--primary);
+}
+
+.iconMemory {
+	background-color: rgba(0, 163, 136, 0.12);
+	color: var(--color--success);
+}
+
+.iconStorage {
+	background-color: rgba(142, 68, 173, 0.12);
+	color: #8e44ad;
+}
+
+.iconNetwork {
+	background-color: rgba(41, 128, 185, 0.12);
+	color: #2980b9;
+}
+
+.metricTitle {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--3xs);
+}
+
+.metricBody {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--xs);
+	flex: 1;
+}
+
+.metricValue {
+	font-size: 28px;
+	font-weight: var(--font-weight--bold);
+	color: var(--color--text--shade-1);
+	line-height: 1.1;
+}
+
+.progressBar {
+	width: 100%;
+	height: 6px;
+	background-color: var(--color--background--light-3);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.progressFill {
+	height: 100%;
+	border-radius: 3px;
+	transition: width 0.5s ease;
+}
+
+.metricDetails {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.networkStats {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--xs);
+}
+
+.networkRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.networkDirection {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--4xs);
+}
+
+.networkValue {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+}
+
+.downloadIcon {
+	color: var(--color--success);
+}
+
+.uploadIcon {
+	color: var(--color--primary);
+}
+
+.networkDivider {
+	border-bottom: 1px dashed var(--color--background--light-3);
 }
 
 /* KPI Grid */

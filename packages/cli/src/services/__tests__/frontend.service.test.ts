@@ -19,7 +19,6 @@ import { FrontendService, type PublicFrontendSettings } from '@/services/fronten
 import type { UrlService } from '@/services/url.service';
 import type { WorkflowReviewPolicyService } from '@/services/workflow-review-policy.service';
 import type { UserManagementMailer } from '@/user-management/email';
-import type { OwnershipService } from '../ownership.service';
 
 // Mock the workflow history helper functions to avoid DI container issues in tests
 vi.mock('@/workflows/workflow-history/workflow-history-helper', () => ({
@@ -179,10 +178,6 @@ describe('FrontendService', () => {
 		isMFAEnforced: vi.fn().mockReturnValue(false),
 	});
 
-	const ownershipService = mock<OwnershipService>({
-		hasInstanceOwner: vi.fn().mockReturnValue(false),
-	});
-
 	const aiUsageService = mock<AiUsageService>({
 		getAiUsageSettings: vi.fn().mockResolvedValue(true),
 	});
@@ -221,7 +216,6 @@ describe('FrontendService', () => {
 				licenseState,
 				moduleRegistry,
 				mfaService,
-				ownershipService,
 				aiUsageService,
 				workflowRepository,
 				workflowReviewPolicyService,

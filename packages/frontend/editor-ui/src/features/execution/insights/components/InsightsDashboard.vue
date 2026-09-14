@@ -81,16 +81,6 @@ const transformFilter = ({ id, desc }: { id: string; desc: boolean }) => {
 
 const sortTableBy = ref([{ id: props.insightType, desc: true }]);
 
-const granularity = computed(() => {
-	const { start, end } = range.value;
-	if (!start || !end) return 'day';
-
-	const comparison = end.compare(start);
-
-	if (comparison <= 0) return 'hour';
-	if (comparison <= 30) return 'day';
-	return 'week';
-});
 const userProjectId = computed(
 	() => projectsStore.personalProject?.id ?? projectsStore.currentProject?.id,
 );
@@ -132,6 +122,17 @@ const range = shallowRef<{
 }>({
 	start: getDefaultRangeStart(),
 	end: maxDate.copy(),
+});
+
+const granularity = computed(() => {
+	const { start, end } = range.value;
+	if (!start || !end) return 'day';
+
+	const comparison = end.compare(start);
+
+	if (comparison <= 0) return 'hour';
+	if (comparison <= 30) return 'day';
+	return 'week';
 });
 
 /**
@@ -259,45 +260,68 @@ onBeforeMount(async () => {
 				:range-end="range.end"
 			/>
 
-			<InsightsSummary
-				v-if="insightsStore.isSummaryEnabled"
-				:summary="insightsStore.summary.state"
-				:loading="insightsStore.summary.isLoading"
-				:start-date="range.start"
-				:end-date="range.end"
-				:class="$style.insightsBanner"
-			/>
-			<div :class="$style.insightsContent">
-				<div
-					v-if="insightsStore.isDashboardEnabled || isTimeSavedRoute"
-					:class="$style.insightsContentWrapper"
-				>
-					<div
-						:class="[
-							$style.dataLoader,
-							{
-								[$style.isDataLoading]:
-									insightsStore.charts.isLoading || insightsStore.table.isLoading,
-							},
-						]"
-					>
-						<N8nSpinner />
-						<span>{{ i18n.baseText('insights.chart.loading') }}</span>
+			<!-- Section 1: Execution Metrics Cards -->
+			<section v-if="insightsStore.isSummaryEnabled" :class="$style.section">
+				<div :class="$style.sectionHeader">
+					<N8nHeading bold tag="h3" size="medium">Execution Metrics</N8nHeading>
+				</div>
+				<InsightsSummary
+					:summary="insightsStore.summary.state"
+					:loading="insightsStore.summary.isLoading"
+					:start-date="range.start"
+					:end-date="range.end"
+					:class="$style.insightsSummaryCard"
+				/>
+			</section>
+
+			<!-- Sections 2 & 3: Breakdown by Day Graph & Breakdown by Workflow Table -->
+			<template v-if="insightsStore.isDashboardEnabled || isTimeSavedRoute">
+				<!-- Section 2: Breakdown by Day Graph -->
+				<section :class="$style.section">
+					<div :class="$style.card">
+						<div
+							:class="[
+								$style.dataLoader,
+								{
+									[$style.isDataLoading]: insightsStore.charts.isLoading,
+								},
+							]"
+						>
+							<N8nSpinner />
+							<span>{{ i18n.baseText('insights.chart.loading') }}</span>
+						</div>
+						<N8nHeading bold tag="h3" size="medium" class="mb-s">
+							{{
+								i18n.baseText('insights.dashboard.chart.title', { interpolate: { granularity } })
+							}}
+						</N8nHeading>
+						<div :class="$style.insightsChartWrapper">
+							<component
+								:is="chartComponents[props.insightType]"
+								:type="props.insightType"
+								:data="insightsStore.charts.state"
+								:granularity
+								:start-date="range.start.toString()"
+								:end-date="range.end.toString()"
+							/>
+						</div>
 					</div>
-					<div :class="$style.insightsChartWrapper">
-						<N8nHeading bold tag="h3" size="medium" class="mb-s">{{
-							i18n.baseText('insights.dashboard.chart.title', { interpolate: { granularity } })
-						}}</N8nHeading>
-						<component
-							:is="chartComponents[props.insightType]"
-							:type="props.insightType"
-							:data="insightsStore.charts.state"
-							:granularity
-							:start-date="range.start.toString()"
-							:end-date="range.end.toString()"
-						/>
-					</div>
-					<div :class="$style.insightsTableWrapper">
+				</section>
+
+				<!-- Section 3: Breakdown by Workflow Table -->
+				<section :class="$style.section">
+					<div :class="$style.card">
+						<div
+							:class="[
+								$style.dataLoader,
+								{
+									[$style.isDataLoading]: insightsStore.table.isLoading,
+								},
+							]"
+						>
+							<N8nSpinner />
+							<span>{{ i18n.baseText('insights.chart.loading') }}</span>
+						</div>
 						<InsightsTableWorkflows
 							v-model:sort-by="sortTableBy"
 							:data="insightsStore.table.state"
@@ -306,9 +330,9 @@ onBeforeMount(async () => {
 							@update:options="fetchPaginatedTableData"
 						/>
 					</div>
-				</div>
-				<InsightsPaywall v-else />
-			</div>
+				</section>
+			</template>
+			<InsightsPaywall v-else />
 		</div>
 	</div>
 </template>
@@ -327,6 +351,9 @@ onBeforeMount(async () => {
 	max-width: var(--content-container--width);
 	padding: var(--spacing--lg) var(--spacing--2xl);
 	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--xl);
 }
 
 .headerRow {
@@ -337,39 +364,35 @@ onBeforeMount(async () => {
 	flex-wrap: wrap;
 }
 
-.insightsBanner {
-	margin-bottom: 0;
-
-	ul {
-		border-bottom-left-radius: 0;
-		border-bottom-right-radius: 0;
-	}
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing--xs);
 }
 
-.insightsContent {
-	padding: var(--spacing--lg) 0;
-	border: var(--border-width) var(--border-style) var(--color--foreground);
-	border-top: 0;
-	border-bottom-left-radius: 6px;
-	border-bottom-right-radius: 6px;
-	background: var(--color--background--light-3);
+.sectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 }
 
-.insightsContentWrapper {
+.insightsSummaryCard {
+	margin-bottom: 0 !important;
+	padding-top: 0 !important;
+}
+
+.card {
 	position: relative;
-	overflow-x: hidden;
+	background: var(--color--background--light-3);
+	border: var(--border-width) var(--border-style) var(--color--foreground);
+	border-radius: 6px;
+	padding: var(--spacing--md) var(--spacing--lg);
+	overflow: hidden;
 }
 
 .insightsChartWrapper {
 	position: relative;
 	height: 292px;
-	padding: 0 var(--spacing--lg) var(--spacing--lg);
-	z-index: 1;
-}
-
-.insightsTableWrapper {
-	position: relative;
-	padding: var(--spacing--lg) var(--spacing--lg) 0;
 	z-index: 1;
 }
 
